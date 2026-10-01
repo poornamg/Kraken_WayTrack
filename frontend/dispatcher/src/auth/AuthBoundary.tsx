@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { apiRequest } from "../api/client"
+import { apiRequest } from "../services/client"
 import { readSession, saveSession, type Role, type Session } from "./session"
 
 export function AuthBoundary({ expectedRole, children }: { expectedRole: Role; children: ReactNode }) {

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, type ReactNode } from "react"
-import { getCatalogue, getStoreContext, submitStoreOrder, storeDeliveryApi, type StoreDelivery } from "./api/store"
+import { getCatalogue, getStoreContext, submitStoreOrder, storeDeliveryApi, type StoreDelivery } from "./services/store"
 import { AnimatePresence, motion, useMotionValue, animate, useTransform } from "motion/react"
 import wayTrackLogo from "./assets/waytrack-logo.png"
 import {
@@ -4314,7 +4314,7 @@ function OrdersPage({ business, onNewOrder, onOpenOrder }: { business: "fresh" |
 
   useEffect(() => {
     const fetchOrders = () => {
-      import("./api/store").then((module) => {
+      import("./services/store").then((module) => {
         module.listStoreOrders(business).then((data) => {
           const formatted = data.map(o => ({
             id: o.id,

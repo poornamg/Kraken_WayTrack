@@ -5,7 +5,7 @@ import ActiveLoadPage from "./pages/ActiveLoadPage"
 import AvailableWorkPage from "./pages/AvailableWorkPage"
 import LoadConfirmedPage from "./pages/LoadConfirmedPage"
 import ReconciliationPage from "./pages/ReconciliationPage"
-import { loadApi, type LoadRecord } from "./api/loads"
+import { loadApi, type LoadRecord } from "./services/loads"
 import type { LoadItemData, LoadItemException } from "./components/loader-ui"
 
 // ── Workflow view type ───────────────────────────────────────────────────────

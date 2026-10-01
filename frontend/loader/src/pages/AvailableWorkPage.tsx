@@ -19,7 +19,7 @@ import {
 } from "../components/loader-ui"
 import type { LoadCase } from "../data/mock-data"
 import { useConnectivity } from "../hooks/useConnectivity"
-import { loadApi } from "../api/loads"
+import { loadApi } from "../services/loads"
 
 // Prototype URL overrides
 const requestedView = new URLSearchParams(window.location.search).get("view")
