@@ -1,6 +1,10 @@
-import type { OrderType, CatalogProduct, OrderDrafts, UpcomingDelivery, OrderDetailState } from "../types";
+import type { ReactNode } from "react"
+import { CalendarDays, CheckCircle2, PackageCheck, ReceiptText, Truck } from "lucide-react"
+import type { OrderType, CatalogProduct, OrderDrafts, UpcomingDelivery, OrderDetailState, StatusKind } from "../types"
+import { formatOrderType, getDefaultOrderType } from "../utils"
+import { productCatalog } from "./productCatalog"
 
-function getUpcomingDeliveries(business: "fresh" | "style" | "tech") {
+export function getUpcomingDeliveries(business: "fresh" | "style" | "tech"): UpcomingDelivery[] {
   return [
     {
       id: "ORD-1065",
@@ -20,8 +24,7 @@ function getUpcomingDeliveries(business: "fresh" | "style" | "tech") {
   ]
 }
 
-
-const recentActivity = [
+export const recentActivity = [
   {
     id: "ORD-1037",
     label: "Receipt confirmed",
@@ -42,20 +45,22 @@ const recentActivity = [
   },
 ]
 
-
-function getCatalog(business: "fresh" | "style" | "tech", type: OrderType): CatalogProduct[] {
+export function getCatalog(business: "fresh" | "style" | "tech", type: OrderType): CatalogProduct[] {
   const catalog = productCatalog[business] as Record<string, CatalogProduct[]>
   return catalog[type] || []
 }
 
-
-function getDraft(drafts: OrderDrafts, type: OrderType): Record<string, number> {
+export function getDraft(drafts: OrderDrafts, type: OrderType): Record<string, number> {
   const safeDrafts = drafts as Record<string, Record<string, number>>
   return safeDrafts[type] || {}
 }
 
-
-const orderActivity = [
+export const orderActivity: Array<{
+  label: string
+  time: string
+  step: number
+  icon: ReactNode
+}> = [
   {
     label: "Order received",
     time: "Wed · 13:46",

@@ -9,10 +9,10 @@ import { ProductSelectionRow } from "../components/new-order/ProductSelectionRow
 import { OrderPlanningContext } from "../components/new-order/OrderPlanningContext"
 import { DesktopOrderSummary } from "../components/new-order/DesktopOrderSummary"
 import { MobileOrderSummarySheet } from "../components/new-order/MobileOrderSummarySheet"
-import type { OrderType, OrderDrafts } from "../types/index"
+import type { OrderType, OrderDrafts, CatalogProduct } from "../types/index"
 import { productCatalog } from "../types/index"
-import { formatOrderType, getDefaultOrderType, selectedProducts, getCatalog } from "../utils/index"
-import { getDraft } from "../data/mockData"
+import { formatOrderType, getDefaultOrderType, selectedProducts } from "../utils/index"
+import { getDraft, getCatalog } from "../data/mockData"
 
 export function NewOrderPage({ business, 
   afterCutoff = false,
@@ -55,7 +55,7 @@ export function NewOrderPage({ business,
   }, [business, type])
 
   const products = getCatalog(business, type)
-  const filteredProducts = products.filter((product) =>
+  const filteredProducts = products.filter((product: CatalogProduct) =>
     product.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   )
   const currentItems = selectedProducts(business, type, getDraft(quantities, type))
@@ -138,7 +138,7 @@ export function NewOrderPage({ business,
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
               {filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
+                filteredProducts.map((product: CatalogProduct) => (
                   <ProductSelectionRow
                     product={product}
                     quantity={getDraft(quantities, type)[product.id] ?? 0}

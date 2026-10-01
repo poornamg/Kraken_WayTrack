@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo, type ReactNode } from "react"
 import { AnimatePresence, motion, useMotionValue, animate, useTransform } from "motion/react"
 import { Bell, ChevronDown, Home, LogOut } from "lucide-react"
-import wayTrackLogo from "../../assets/waytrack-logo"
+import wayTrackLogo from "../../assets/waytrack-logo.png"
 import { IconButton } from "../ui/Button"
 import { navigation } from ".//navigation"
 import { GlobalCutoff } from ".//GlobalCutoff"

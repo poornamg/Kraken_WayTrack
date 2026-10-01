@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo, type ReactNode } from "react"
+import type { CatalogProduct } from "../types"
 
 export const deferredProducts: Array<CatalogProduct & { quantity: number }> = [
   { id: "fresh-milk", name: "Fresh milk", unit: "carton", quantity: 24 },

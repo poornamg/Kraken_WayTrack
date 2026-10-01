@@ -74,7 +74,7 @@ export function DeliveriesPage({ business, onOpenOrder }: { business: "fresh" | 
                 <div className="upcoming-row" key={delivery._id}>
                   <span className="upcoming-record"><strong className="data-id">{delivery._id.slice(-8).toUpperCase()}</strong><span>{delivery.items.length} products</span></span>
                   <span className="upcoming-date">{delivery.arrivedAt ? new Date(delivery.arrivedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Scheduled"}</span>
-                  <span className="upcoming-status"><strong>{delivery.status.replaceAll("_", " ")}</strong></span>
+                  <span className="upcoming-status"><strong>{delivery.status.replace(/_/g, " ")}</strong></span>
                   {delivery.status === "arrived" ? <Button onClick={() => void issuePin(delivery)}>Issue PIN</Button> : null}
                   {delivery.status === "completed" && !delivery.receipt ? <Button onClick={() => void confirmReceipt(delivery)}>Confirm receipt</Button> : null}
                 </div>
