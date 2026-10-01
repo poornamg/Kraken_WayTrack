@@ -1,10 +1,9 @@
 import { PrototypeUsersBox } from "../../components/ui/PrototypeUsersBox.js"
 import { ErrorBanner } from "../../components/ui/ErrorBanner.js"
 import { PasswordField } from "../../components/ui/PasswordField.js"
-import { IdIcon, LockIcon, EyeIcon, EyeOffIcon, AlertIcon } from "../../components/ui/Icons.js"
+import { IdIcon } from "../../components/ui/Icons.js"
 import { useAuthForm } from "../../hooks/useAuthForm.js"
 import { AuthLayout } from "./AuthLayout"
-import { PROTOTYPE_USERS } from "@/data/mockUsers"
 
 const isMock = import.meta.env.VITE_USE_MOCK_AUTH === "true"
 
