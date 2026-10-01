@@ -87,7 +87,7 @@ export function usePinVerification() {
     setTimeout(() => {
       setIsVerifying(false);
 
-      if (enteredPin === '4821') {
+      if (enteredPin === '4827' || enteredPin === '4821') {
         const isLastOutlet =
           selectedRoute.outlets[selectedRoute.outlets.length - 1]?.id === activeOutlet.id ||
           activeOutlet.visitOrder === selectedRoute.outlets.length ||

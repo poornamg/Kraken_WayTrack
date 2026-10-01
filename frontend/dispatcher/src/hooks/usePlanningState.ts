@@ -184,7 +184,7 @@ export function usePlanningState({ navigate, setToast }: UsePlanningStateProps) 
             serviceDate: targetDate,
             departureAt,
             plannedEndAt,
-            vehicleId: vehicle.id || vehicle.vehicleId || String(vehicle._id),
+            vehicleId: vehicle.id,
             driverId: selectedDriverId,
             distanceKm: parseFloat(distanceKm || "0") || 50,
             stops: liveOrders.map((order, i) => ({
