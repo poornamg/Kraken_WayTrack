@@ -7,12 +7,12 @@ import { badRequest, forbidden, notFound, unprocessable } from "../../common/err
 import { findIdempotentResult, saveIdempotentResult } from "../../common/idempotency.js"
 import { pagination, paginationSchema } from "../../common/pagination.js"
 import { ok, page } from "../../common/response.js"
-import { cutoffContext, parseServiceDate } from "../../common/time.js"
+import { orderingCutoffContext, parseServiceDate, selectPlanningDate } from "../../common/time.js"
 import { CalendarDay, Order, Outlet, Product, User } from "../../database/models/index.js"
 
 const createBody = z.object({
   orderType: z.string().min(1).max(40),
-  requestedDate: z.string(),
+  requestedDate: z.string().optional(),
   items: z.array(z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(100_000) })).min(1).max(200),
 })
 
@@ -24,7 +24,22 @@ async function managerContext(userId: string) {
   return { user, outlet }
 }
 
+async function currentOrderingContext() {
+  const cutoff = orderingCutoffContext()
+  const operatingDays = await CalendarDay.find({ date: { $gt: cutoff.orderingDate }, isOperating: true }).sort({ date: 1 }).limit(2).lean()
+  const requestedDate = selectPlanningDate(operatingDays.map((day) => day.date), cutoff.cutoffBucket)
+  if (!requestedDate) throw unprocessable("PLANNING_CALENDAR_UNAVAILABLE", "The next planning run is not available in the operating calendar.")
+  return { ...cutoff, requestedDate }
+}
+
 export async function orderRoutes(app: FastifyInstance) {
+  app.get("/store/context", { preHandler: app.authenticate }, async (request) => {
+    const auth = requireRole(request, "store_manager")
+    const { user, outlet } = await managerContext(auth.userId)
+    const [ordering, orderTypes] = await Promise.all([currentOrderingContext(), Product.distinct("orderTypes", { brand: outlet.brand, active: true })])
+    return ok(request, { user: { id: user._id, employeeId: user.employeeId, name: user.name }, outlet: { outletId: outlet.outletId, displayName: outlet.displayName, brand: outlet.brand, district: outlet.district, depot: outlet.depot }, orderTypes, ordering })
+  })
+
   app.post("/orders", { preHandler: app.authenticate }, async (request, reply) => {
     const auth = requireRole(request, "store_manager")
     const parsed = createBody.safeParse(request.body)
@@ -32,10 +47,15 @@ export async function orderRoutes(app: FastifyInstance) {
     const idem = await findIdempotentResult(request, "orders.create", parsed.data)
     if (idem.existing) return reply.status(idem.existing.statusCode).send(idem.existing.response)
 
-    parseServiceDate(parsed.data.requestedDate)
+    const ordering = await currentOrderingContext()
+    if (parsed.data.requestedDate) {
+      parseServiceDate(parsed.data.requestedDate)
+      if (parsed.data.requestedDate !== ordering.requestedDate) throw unprocessable("STALE_PLANNING_DATE", "The planning date changed. Refresh the order context and try again.", { requestedDate: ordering.requestedDate })
+    }
+    const requestedDate = ordering.requestedDate
     const [{ outlet }, calendar, products] = await Promise.all([
       managerContext(auth.userId),
-      CalendarDay.findOne({ date: parsed.data.requestedDate }).lean(),
+      CalendarDay.findOne({ date: requestedDate }).lean(),
       Product.find({ _id: { $in: parsed.data.items.map((item) => item.productId) }, active: true }).lean(),
     ])
     if (!calendar?.isOperating) throw unprocessable("NON_OPERATING_DAY", "Orders cannot be requested for a non-operating day.")
@@ -59,21 +79,20 @@ export async function orderRoutes(app: FastifyInstance) {
       }
     })
     const now = new Date()
-    const cutoff = cutoffContext(parsed.data.requestedDate)
     const order = await Order.create({
       orderNumber: `ORD-${now.toISOString().slice(2, 10).replaceAll("-", "")}-${randomBytes(3).toString("hex").toUpperCase()}`,
       outletId: outlet.outletId,
       storeManagerId: auth.userId,
       brand: outlet.brand,
       orderType: parsed.data.orderType,
-      requestedDate: parsed.data.requestedDate,
-      cutoffBucket: cutoff.cutoffBucket,
+      requestedDate,
+      cutoffBucket: ordering.cutoffBucket,
       items,
       totalWeightKg: items.reduce((total, item) => total + item.unitWeightKg * item.quantity, 0),
       totalVolumeM3: items.reduce((total, item) => total + item.unitVolumeM3 * item.quantity, 0),
       statusHistory: [{ status: "submitted", at: now, actorId: auth.userId }],
     })
-    await audit(request, "order.submitted", "order", order.id, { orderNumber: order.orderNumber, outletId: outlet.outletId, cutoffBucket: cutoff.cutoffBucket })
+    await audit(request, "order.submitted", "order", order.id, { orderNumber: order.orderNumber, outletId: outlet.outletId, cutoffBucket: ordering.cutoffBucket, requestedDate })
     const response = ok(request, order.toObject())
     await saveIdempotentResult({ key: idem.key, requestHash: idem.requestHash, operation: "orders.create", userId: auth.userId, statusCode: 201, response })
     return reply.status(201).send(response)

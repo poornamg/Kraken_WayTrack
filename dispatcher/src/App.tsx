@@ -714,6 +714,7 @@ const VEHICLE_DAY: Record<string, { turnsToday: number; volumeM3: number }> = {
 }
 
 function vehicleDay(v: Vehicle) {
+  if (v.volumeM3 !== undefined && v.turnsToday !== undefined) return { turnsToday: v.turnsToday, volumeM3: v.volumeM3 }
   const known = VEHICLE_DAY[v.id]
   const fallbackVolume =
     v.type === "Van" ? 6 : v.type === "Refrigerated" ? 12 : v.capacityKg >= 3000 ? 30 : 18
@@ -964,6 +965,7 @@ function ReachMap({ packed }: { packed: boolean }) {
 
 function SchedulePage({
   navigateHome,
+  serviceDate,
   vehicles,
   setVehicles,
   orders,
@@ -972,6 +974,7 @@ function SchedulePage({
   onOpenDefer,
 }: {
   navigateHome: (message: string, scheduled: Order[], vehicle: Vehicle, routeDate: string, departureTime: string) => void | Promise<void>
+  serviceDate: string
   vehicles: Vehicle[]
   setVehicles: React.Dispatch<React.SetStateAction<Vehicle[]>>
   orders: Order[]
@@ -982,9 +985,8 @@ function SchedulePage({
   const params = new URLSearchParams(window.location.search)
   const dateParam = params.get("date")
   const isDatePreset = Boolean(dateParam)
-  const [routeDate, setRouteDate] = useState(() =>
-    isDatePreset ? "Mon 28 Sep" : "Today · Sun 27",
-  )
+  const prototypeMode = import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE === "true"
+  const [routeDate, setRouteDate] = useState(() => prototypeMode ? (isDatePreset ? "Mon 28 Sep" : "Today · Sun 27") : serviceDate)
   const [departsTime, setDepartsTime] = useState(() =>
     isDatePreset ? "07:00" : "12:30",
   )
@@ -2421,48 +2423,60 @@ export default function App() {
     new URLSearchParams(window.location.search).get("date") ? 28 : 27,
   )
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles)
+  const prototypeMode = import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE === "true"
+  const [serviceDate, setServiceDate] = useState(import.meta.env.VITE_SERVICE_DATE ?? "")
+  const [vehicles, setVehicles] = useState<Vehicle[]>(prototypeMode ? initialVehicles : [])
   const [drivers, setDrivers] = useState<DriverReference[]>([])
-  const [orders, setOrders] = useState<Order[]>(initialOrders)
-  const [routes, setRoutes] = useState<RouteRecord[]>(initialRoutes)
+  const [selectedDriverId, setSelectedDriverId] = useState("")
+  const [distanceKm, setDistanceKm] = useState("")
+  const [durationMinutes, setDurationMinutes] = useState("")
+  const [orders, setOrders] = useState<Order[]>(prototypeMode ? initialOrders : [])
+  const [routes, setRoutes] = useState<RouteRecord[]>(prototypeMode ? initialRoutes : [])
   const [remarks, setRemarks] = useState<Remark[]>(initialRemarks)
 
   useEffect(() => {
-    if (import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE === "true") return
-    const serviceDate = import.meta.env.VITE_SERVICE_DATE ?? new Date().toISOString().slice(0, 10)
-    void Promise.all([planningApi.orders(serviceDate), planningApi.vehicles(serviceDate), planningApi.drivers()])
-      .then(([apiOrders, apiVehicles, apiDrivers]) => {
+    if (prototypeMode) return
+    void planningApi.orders(serviceDate || undefined).then(async (allOrders) => {
+        const planningDate = serviceDate || allOrders.map((order) => order.requestedDate).sort()[0]
+        if (!planningDate) { setOrders([]); setVehicles([]); return }
+        setServiceDate(planningDate)
+        const apiOrders = allOrders.filter((order) => order.requestedDate === planningDate)
+        const [apiVehicles, apiDrivers] = await Promise.all([planningApi.vehicles(planningDate), planningApi.drivers()])
         setOrders(apiOrders.map((order) => ({
           apiId: order._id,
           id: order.orderNumber,
-          shop: order.outletId,
-          town: order.outletId,
+          shop: order.outlet?.displayName ?? order.outletId,
+          town: order.outlet?.district ?? order.outletId,
           type: order.brand,
           items: `${order.items.reduce((sum, item) => sum + item.quantity, 0)} units`,
           kg: order.totalWeightKg,
-          emergency: order.cutoffBucket === "after_cutoff",
+          emergency: false,
           inReach: true,
-          suggested: true,
+          suggested: false,
+          dueDay: Number(order.requestedDate.slice(8, 10)),
         })))
         setVehicles(apiVehicles.map((vehicle) => ({
           id: vehicle.vehicleId,
           type: vehicle.temperatureClass === "reefer" ? "Refrigerated" : vehicle.type.toLowerCase() === "van" ? "Van" : "Lorry",
           capacityKg: vehicle.weightCapacityKg,
-          length: "Reference fleet",
-          turns: 0,
-          turnQuota: 2,
-          km: 0,
+          length: `${vehicle.volumeCapacityM3} m³`,
+          turns: vehicle.routesToday,
+          turnQuota: vehicle.routeLimit,
+          km: vehicle.usedDistanceKm,
           kmQuota: Math.round(vehicle.weeklyFuelQuotaL * vehicle.kmPerL),
-          fuel: 100,
+          fuel: vehicle.weeklyFuelQuotaL > 0 ? Math.max(0, Math.round((1 - vehicle.usedFuelL / vehicle.weeklyFuelQuotaL) * 100)) : 0,
+          volumeM3: vehicle.volumeCapacityM3,
+          turnsToday: vehicle.routesToday,
         })))
         setDrivers(apiDrivers)
+        if (apiDrivers.length === 1) setSelectedDriverId(apiDrivers[0]._id)
       })
       .catch((error) => {
         console.error("Dispatcher planning data request failed", error)
         setOrders([])
         setVehicles([])
       })
-  }, [])
+  }, [prototypeMode])
 
   const [manageVehiclesOpen, setManageVehiclesOpen] = useState(false)
   const [deferOpen, setDeferOpen] = useState(false)
@@ -2488,9 +2502,6 @@ export default function App() {
     setToast("")
   }
 
-  const serviceDate = import.meta.env.VITE_SERVICE_DATE ?? new Date().toISOString().slice(0, 10)
-  const prototypeMode = import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE === "true"
-
   const datePlusDays = (date: string, days: number) => {
     const value = new Date(`${date}T00:00:00Z`)
     value.setUTCDate(value.getUTCDate() + days)
@@ -2501,19 +2512,24 @@ export default function App() {
     if (prototypeMode) return
     const liveOrders = scheduled.filter((order): order is Order & { apiId: string } => Boolean(order.apiId))
     if (liveOrders.length !== scheduled.length) throw new Error("One or more selected orders are not backed by the planning service.")
-    const driver = drivers[0]
+    const driver = drivers.find((candidate) => candidate._id === selectedDriverId)
     if (!driver) throw new Error("No active Driver is available for this route.")
+    const plannedDistanceKm = Number(distanceKm)
+    if (!Number.isFinite(plannedDistanceKm) || plannedDistanceKm <= 0) throw new Error("Enter the planned route distance before publishing.")
+    const plannedDurationMinutes = Number(durationMinutes)
+    if (!Number.isFinite(plannedDurationMinutes) || plannedDurationMinutes <= 0) throw new Error("Enter the planned route duration before publishing.")
     const departureAt = new Date(`${targetDate}T${departureTime}:00+05:30`)
+    const plannedEndAt = new Date(departureAt.getTime() + plannedDurationMinutes * 60_000)
     const input: TripInput = {
       serviceDate: targetDate,
       departureAt: departureAt.toISOString(),
-      plannedEndAt: new Date(departureAt.getTime() + (liveOrders.length + 1) * 30 * 60_000).toISOString(),
+      plannedEndAt: plannedEndAt.toISOString(),
       vehicleId: vehicle.id,
       driverId: driver._id,
-      distanceKm: Math.max(10, liveOrders.length * 12),
+      distanceKm: plannedDistanceKm,
       stops: liveOrders.map((order, index) => ({
         orderId: order.apiId,
-        plannedArrivalAt: new Date(departureAt.getTime() + (index + 1) * 20 * 60_000).toISOString(),
+        plannedArrivalAt: new Date(departureAt.getTime() + plannedDurationMinutes * 60_000 * ((index + 1) / (liveOrders.length + 1))).toISOString(),
       })),
     }
     const draft = await planningApi.createTrip(input)
@@ -2544,7 +2560,7 @@ export default function App() {
 
   const completeSchedule = async (message: string, scheduled: Order[], vehicle: Vehicle, routeDate: string, departureTime: string) => {
     try {
-      const targetDate = routeDate.includes("28") ? datePlusDays(serviceDate, 1) : serviceDate
+      const targetDate = prototypeMode && routeDate.includes("28") ? datePlusDays(serviceDate, 1) : serviceDate
       await publishSchedule(scheduled, vehicle, targetDate, departureTime)
       finishSchedule(message, scheduled)
     } catch (error) {
@@ -2554,7 +2570,7 @@ export default function App() {
 
   const completeImmediate = async (message: string, scheduled: Order[], day: number, vehicle: Vehicle, departureTime: string) => {
     try {
-      const targetDate = datePlusDays(serviceDate, Math.max(0, day - TODAY))
+      const targetDate = prototypeMode ? datePlusDays(serviceDate, Math.max(0, day - TODAY)) : serviceDate
       await publishSchedule(scheduled, vehicle, targetDate, departureTime)
       finishSchedule(message, scheduled, day)
     } catch (error) {
@@ -2615,6 +2631,14 @@ export default function App() {
 
   return (
     <AppShell navigate={navigate} path={path}>
+      {path === "/schedule" && !prototypeMode ? (
+        <div style={{ display: "flex", gap: 16, alignItems: "end", padding: "16px 24px", background: "white", borderBottom: "1px solid var(--navy-100)" }}>
+          <label style={{ display: "grid", gap: 6, minWidth: 260 }}><span>Assigned driver</span><select value={selectedDriverId} onChange={(event) => setSelectedDriverId(event.target.value)}><option value="">Select a driver</option>{drivers.map((driver) => <option key={driver._id} value={driver._id}>{driver.name} · {driver.employeeId}</option>)}</select></label>
+          <label style={{ display: "grid", gap: 6 }}><span>Planned distance (km)</span><input min="0.1" step="0.1" type="number" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} /></label>
+          <label style={{ display: "grid", gap: 6 }}><span>Planned duration (minutes)</span><input min="1" step="1" type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} /></label>
+          <span>Planning date · {serviceDate}</span>
+        </div>
+      ) : null}
       {path === "/schedule" &&
         ["immediate", "due"].includes(
           new URLSearchParams(search).get("mode") ?? "",
@@ -2642,6 +2666,7 @@ export default function App() {
           onOpenDefer={() => setDeferOpen(true)}
           onOpenManageVehicles={() => setManageVehiclesOpen(true)}
           orders={orders}
+          serviceDate={serviceDate}
           setOrders={setOrders}
           setVehicles={setVehicles}
           vehicles={vehicles}

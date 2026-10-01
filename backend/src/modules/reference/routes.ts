@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify"
+import { DateTime } from "luxon"
 import { z } from "zod"
 import { requireRole } from "../../common/auth.js"
 import { badRequest, notFound } from "../../common/errors.js"
 import { pagination, paginationSchema } from "../../common/pagination.js"
 import { ok, page } from "../../common/response.js"
-import { cutoffContext, parseServiceDate } from "../../common/time.js"
-import { CalendarDay, Outlet, Product, User, Vehicle } from "../../database/models/index.js"
+import { cutoffContext, OPERATING_ZONE, parseServiceDate } from "../../common/time.js"
+import { CalendarDay, Outlet, Product, Trip, User, Vehicle } from "../../database/models/index.js"
 
 const clean = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
@@ -34,7 +35,15 @@ export async function referenceRoutes(app: FastifyInstance) {
     if (query.data.type) filter.type = query.data.type
     if (query.data.temp) filter.temperatureClass = query.data.temp
     const rows = await Vehicle.find(filter).sort({ vehicleId: 1 }).lean()
-    return ok(request, rows)
+    const date = DateTime.fromISO(query.data.serviceDate, { zone: OPERATING_ZONE })
+    const weekStart = date.startOf("week").toFormat("yyyy-MM-dd")
+    const weekEnd = date.endOf("week").toFormat("yyyy-MM-dd")
+    const trips = await Trip.find({ vehicleId: { $in: rows.map((row) => row.vehicleId) }, serviceDate: { $gte: weekStart, $lte: weekEnd }, status: { $ne: "cancelled" } }).select("vehicleId serviceDate distanceKm").lean()
+    return ok(request, rows.map((vehicle) => {
+      const vehicleTrips = trips.filter((trip) => trip.vehicleId === vehicle.vehicleId)
+      const usedDistanceKm = vehicleTrips.reduce((sum, trip) => sum + trip.distanceKm, 0)
+      return { ...vehicle, routesToday: vehicleTrips.filter((trip) => trip.serviceDate === query.data.serviceDate).length, routeLimit: 2, usedDistanceKm, usedFuelL: usedDistanceKm / vehicle.kmPerL }
+    }))
   })
 
   app.get("/reference/drivers", { preHandler: app.authenticate }, async (request) => {

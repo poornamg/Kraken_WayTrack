@@ -27,6 +27,8 @@ export type Vehicle = {
   km: number
   kmQuota: number
   fuel: number
+  volumeM3?: number
+  turnsToday?: number
 }
 
 export type Order = {

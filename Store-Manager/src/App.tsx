@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, type ReactNode } from "react"
-import { getCatalogue, submitStoreOrder, storeDeliveryApi, type StoreDelivery } from "./api/store"
+import { getCatalogue, getStoreContext, submitStoreOrder, storeDeliveryApi, type StoreDelivery } from "./api/store"
 import { AnimatePresence, motion, useMotionValue, animate, useTransform } from "motion/react"
 import wayTrackLogo from "./assets/waytrack-logo.png"
 import {
@@ -4548,6 +4548,7 @@ export default function App() {
   const prototypeView = params.get("view")
   const initialBusiness = (params.get("business") as "fresh" | "style" | "tech") || "fresh"
   const [business, setBusiness] = useState<"fresh" | "style" | "tech">(initialBusiness)
+  const prototypeMode = import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE === "true"
   const showAttention = prototypeState !== "no-attention"
   const afterCutoff = prototypeState === "after-cutoff"
   const showUpcoming = prototypeState !== "no-upcoming"
@@ -4559,13 +4560,21 @@ export default function App() {
     setBusiness(newBusiness)
     setOrderType(getDefaultOrderType(newBusiness))
   }
-  const [drafts, setDrafts] = useState<OrderDrafts>(prototypeState === "empty" ? { dry: {}, chilled: {}, products: {} } as unknown as OrderDrafts : mockDrafts[business])
+  const [drafts, setDrafts] = useState<OrderDrafts>(prototypeMode && prototypeState !== "empty" ? mockDrafts[business] : { dry: {}, chilled: {}, products: {} } as OrderDrafts)
 
   useEffect(() => {
-    if (prototypeState !== "empty") {
+    if (prototypeMode) return
+    void getStoreContext().then((context) => {
+      const outletBusiness = context.outlet.brand.toLowerCase()
+      if (outletBusiness === "fresh" || outletBusiness === "style" || outletBusiness === "tech") handleBusinessChange(outletBusiness)
+    }).catch((error) => console.error("Store context request failed", error))
+  }, [prototypeMode])
+
+  useEffect(() => {
+    if (prototypeMode && prototypeState !== "empty") {
       setDrafts(mockDrafts[business])
     }
-  }, [business])
+  }, [business, prototypeMode, prototypeState])
   const [view, setView] =
     useState<"home" | "orders" | "deliveries" | "new-order" | "review" | "confirmation" | "order-detail" | "deferred-detail" | "verify-delivery">(
       prototypeView === "new-order" ||
@@ -4821,6 +4830,5 @@ export default function App() {
     </div>
   )
 }
-
 
 

@@ -3,9 +3,15 @@ import { apiRequest } from "./client"
 export type ApiProduct = { _id: string; sku: string; name: string; brand: string; orderTypes: string[]; unit: string }
 export type CreatedOrder = { _id: string; orderNumber: string; status: string; cutoffBucket: "before_cutoff" | "after_cutoff"; version: number }
 export type StoreDelivery = { _id: string; orderId: string; status: string; outcome?: string; version: number; arrivedAt?: string; completedAt?: string; receipt?: unknown; items: Array<{ sku: string; expected: number; delivered: number; short: number; damaged: number }> }
+export type StoreContext = {
+  user: { id: string; employeeId: string; name: string }
+  outlet: { outletId: string; displayName: string; brand: string; district: string; depot: string }
+  orderTypes: string[]
+  ordering: { requestedDate: string; serverNow: string; cutoffDeadlineAt: string; secondsRemaining: number; cutoffBucket: "before_cutoff" | "after_cutoff" }
+}
 
 const brandName = { fresh: "Fresh", style: "Style", tech: "Tech" } as const
-const orderTypeName = (business: keyof typeof brandName, type: string) => business === "fresh" ? type : "stock"
+const orderTypeName = (_business: keyof typeof brandName, type: string) => type
 
 export function getCatalogue(business: keyof typeof brandName, type: string) {
   const query = new URLSearchParams({ brand: brandName[business], orderType: orderTypeName(business, type), pageSize: "100" })
@@ -13,13 +19,14 @@ export function getCatalogue(business: keyof typeof brandName, type: string) {
 }
 
 export function submitStoreOrder(input: { business: keyof typeof brandName; type: string; items: Array<{ id: string; quantity: number }> }) {
-  const serviceDate = import.meta.env.VITE_SERVICE_DATE ?? new Date().toISOString().slice(0, 10)
   return apiRequest<CreatedOrder>("/orders", {
     method: "POST",
     headers: { "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify({ orderType: orderTypeName(input.business, input.type), requestedDate: serviceDate, items: input.items.map((item) => ({ productId: item.id, quantity: item.quantity })) }),
+    body: JSON.stringify({ orderType: orderTypeName(input.business, input.type), items: input.items.map((item) => ({ productId: item.id, quantity: item.quantity })) }),
   })
 }
+
+export const getStoreContext = () => apiRequest<StoreContext>("/store/context")
 
 export const storeDeliveryApi = {
   list: () => apiRequest<StoreDelivery[]>("/store/deliveries"),

@@ -44,6 +44,8 @@ export async function validateTrip(input: {
 
   const eligible = orders.every((order) => ["submitted", "deferred"].includes(order.status) && !order.allocatedTripId)
   rules.push(passFail("ORDERS_UNALLOCATED", eligible, eligible ? "All orders are eligible and unallocated." : "An order is no longer eligible or is already allocated."))
+  const correctServiceDate = orders.every((order) => order.requestedDate === input.serviceDate)
+  rules.push(passFail("ORDER_SERVICE_DATE", correctServiceDate, correctServiceDate ? "Every order belongs to this planning date." : "Every order must be planned for its requested delivery date."))
 
   const totalWeightKg = orders.reduce((sum, order) => sum + order.totalWeightKg, 0)
   const totalVolumeM3 = orders.reduce((sum, order) => sum + order.totalVolumeM3, 0)

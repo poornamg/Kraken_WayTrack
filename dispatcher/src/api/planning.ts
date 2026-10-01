@@ -1,7 +1,7 @@
 import { apiRequest } from "./client"
 
-export type PlanningOrder = { _id: string; orderNumber: string; outletId: string; brand: "Fresh" | "Style" | "Tech"; items: Array<{ quantity: number; unit: string }>; totalWeightKg: number; cutoffBucket: string; status: string }
-export type FleetVehicle = { vehicleId: string; type: string; temperatureClass: string; weightCapacityKg: number; kmPerL: number; weeklyFuelQuotaL: number }
+export type PlanningOrder = { _id: string; orderNumber: string; outletId: string; requestedDate: string; brand: "Fresh" | "Style" | "Tech"; items: Array<{ quantity: number; unit: string }>; totalWeightKg: number; cutoffBucket: string; status: string; outlet?: { displayName: string; district: string; depot: string } | null }
+export type FleetVehicle = { vehicleId: string; type: string; temperatureClass: string; weightCapacityKg: number; volumeCapacityM3: number; kmPerL: number; weeklyFuelQuotaL: number; routesToday: number; routeLimit: number; usedDistanceKm: number; usedFuelL: number }
 export type DriverReference = { _id: string; employeeId: string; name: string; depot?: string }
 export type TripDraft = { _id: string; version: number; tripNumber: string; status: string }
 export type TripInput = {
@@ -15,7 +15,7 @@ export type TripInput = {
 }
 
 export const planningApi = {
-  orders: (serviceDate: string) => apiRequest<PlanningOrder[]>(`/planning/orders?serviceDate=${encodeURIComponent(serviceDate)}&pageSize=100`),
+  orders: (serviceDate?: string) => apiRequest<PlanningOrder[]>(`/planning/orders?${new URLSearchParams({ ...(serviceDate ? { serviceDate } : {}), pageSize: "100" })}`),
   vehicles: (serviceDate: string) => apiRequest<FleetVehicle[]>(`/reference/vehicles?serviceDate=${encodeURIComponent(serviceDate)}`),
   drivers: () => apiRequest<DriverReference[]>("/reference/drivers"),
   createTrip: (input: TripInput) => apiRequest<TripDraft>("/planning/trips", { method: "POST", body: JSON.stringify(input) }),

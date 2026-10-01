@@ -9,7 +9,7 @@ import { pagination, paginationSchema } from "../../common/pagination.js"
 import { ok, page } from "../../common/response.js"
 import { parseServiceDate } from "../../common/time.js"
 import { expectedVersion } from "../../common/version.js"
-import { LoadRecord, Order, Trip, User, Vehicle } from "../../database/models/index.js"
+import { LoadRecord, Order, Outlet, Trip, User, Vehicle } from "../../database/models/index.js"
 import { validateTrip } from "./constraints.js"
 
 const tripBody = z.object({
@@ -31,14 +31,16 @@ async function buildValidation(data: z.infer<typeof tripBody>, excludeTripId?: s
 export async function planningRoutes(app: FastifyInstance) {
   app.get("/planning/orders", { preHandler: app.authenticate }, async (request) => {
     requireRole(request, "dispatcher")
-    const query = z.object({ serviceDate: z.string(), brand: z.string().optional(), status: z.string().optional() }).merge(paginationSchema).safeParse(request.query)
-    if (!query.success) throw badRequest("A valid serviceDate and filters are required.")
-    parseServiceDate(query.data.serviceDate)
-    const filter: Record<string, unknown> = { requestedDate: query.data.serviceDate, status: query.data.status ?? { $in: ["submitted", "deferred"] }, allocatedTripId: { $exists: false } }
+    const query = z.object({ serviceDate: z.string().optional(), brand: z.string().optional(), status: z.string().optional() }).merge(paginationSchema).safeParse(request.query)
+    if (!query.success) throw badRequest("Invalid planning-order filters.")
+    if (query.data.serviceDate) parseServiceDate(query.data.serviceDate)
+    const filter: Record<string, unknown> = { ...(query.data.serviceDate ? { requestedDate: query.data.serviceDate } : {}), status: query.data.status ?? { $in: ["submitted", "deferred"] }, allocatedTripId: { $exists: false } }
     if (query.data.brand) filter.brand = query.data.brand
     const { skip, limit } = pagination(query.data.page, query.data.pageSize)
-    const [rows, total] = await Promise.all([Order.find(filter).sort({ cutoffBucket: 1, createdAt: 1 }).skip(skip).limit(limit).lean(), Order.countDocuments(filter)])
-    return page(request, rows, query.data.page, query.data.pageSize, total)
+    const [rows, total] = await Promise.all([Order.find(filter).sort({ requestedDate: 1, cutoffBucket: 1, createdAt: 1 }).skip(skip).limit(limit).lean(), Order.countDocuments(filter)])
+    const outlets = await Outlet.find({ outletId: { $in: rows.map((row) => row.outletId) } }).select("outletId displayName district depot coordinates").lean()
+    const outletMap = new Map(outlets.map((outlet) => [outlet.outletId, outlet]))
+    return page(request, rows.map((row) => ({ ...row, outlet: outletMap.get(row.outletId) ?? null })), query.data.page, query.data.pageSize, total)
   })
 
   app.post("/planning/trips", { preHandler: app.authenticate }, async (request, reply) => {

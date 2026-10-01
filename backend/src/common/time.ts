@@ -25,3 +25,17 @@ export function cutoffContext(serviceDate: string, now: DateTime = DateTime.utc(
     cutoffBucket: localNow < cutoff ? "before_cutoff" as const : "after_cutoff" as const,
   }
 }
+
+export function orderingCutoffContext(now: DateTime = DateTime.utc()) {
+  const localNow = now.setZone(OPERATING_ZONE)
+  const cutoff = localNow.startOf("day").set({ hour: 16 })
+  return {
+    orderingDate: localNow.toFormat("yyyy-MM-dd"), serverNow: now.toISO()!, cutoffDeadlineAt: cutoff.toUTC().toISO()!,
+    secondsRemaining: Math.max(0, Math.floor(cutoff.diff(localNow, "seconds").seconds)),
+    cutoffBucket: localNow < cutoff ? "before_cutoff" as const : "after_cutoff" as const,
+  }
+}
+
+export function selectPlanningDate(operatingDates: string[], cutoffBucket: "before_cutoff" | "after_cutoff") {
+  return operatingDates[cutoffBucket === "before_cutoff" ? 0 : 1]
+}
