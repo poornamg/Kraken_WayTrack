@@ -101,7 +101,7 @@ export async function planningRoutes(app: FastifyInstance) {
         if (update.modifiedCount !== orderIds.length) throw conflict("ORDER_ALLOCATION_CONFLICT", "One or more orders were allocated concurrently.")
         const orders = await Order.find({ _id: { $in: orderIds } }).session(session).lean()
         const orderMap = new Map(orders.map((order) => [String(order._id), order]))
-        const loadItems = [...trip.stops].reverse().flatMap((stop) => (orderMap.get(String(stop.orderId))?.items ?? []).map((item) => ({ itemId: `${stop.stopId}-${item.sku}`, stopId: stop.stopId, orderId: stop.orderId, sku: item.sku, name: item.name, expectedQuantity: item.quantity })))
+        const loadItems = [...trip.stops].reverse().flatMap((stop) => (orderMap.get(String(stop.orderId))?.items ?? []).map((item) => ({ itemId: `${stop!.stopId}-${item.sku}`, stopId: stop!.stopId, orderId: stop.orderId, sku: item.sku, name: item.name, expectedQuantity: item.quantity })))
         await LoadRecord.create([{ tripId: trip._id, depot: trip.depot, status: "available", items: loadItems }], { session })
         trip.status = "published"
         trip.set("constraintCheck", { checkedAt: new Date(), valid: true, rules: validation.rules })
@@ -175,4 +175,166 @@ export async function planningRoutes(app: FastifyInstance) {
     const orders = await Order.find({ _id: { $in: trip.stops.map((stop) => stop.orderId) } }).lean()
     return ok(request, { ...trip, orders })
   })
+
+  
+  app.post("/planning/unified-trips", { preHandler: app.authenticate }, async (request, reply) => {
+    const auth = requireRole(request, "dispatcher")
+    const bodySchema = z.object({
+      serviceDate: z.string(),
+      departureAt: z.coerce.date(),
+      plannedEndAt: z.coerce.date(),
+      vehicleId: z.string().min(1),
+      driverId: z.string().min(1),
+      distanceKm: z.number().min(0),
+      stops: z.array(z.object({
+        unifiedOrderId: z.string().min(1),
+        plannedArrivalAt: z.coerce.date()
+      })).min(1),
+      expectedVersion: z.number().int().optional()
+    })
+    const parsed = bodySchema.safeParse(request.body)
+    if (!parsed.success) throw badRequest("The trip draft is invalid.", parsed.error.flatten())
+    parseServiceDate(parsed.data.serviceDate)
+
+    const [driver, vehicle] = await Promise.all([
+      User.findOne({ _id: parsed.data.driverId, role: "driver", active: true }).lean(),
+      Vehicle.findOne({ vehicleId: parsed.data.vehicleId, active: true }).lean(),
+    ])
+    if (!driver) throw unprocessable("DRIVER_UNAVAILABLE", "The selected Driver is unavailable.")
+    if (!vehicle) throw unprocessable("VEHICLE_UNAVAILABLE", "The selected vehicle is unavailable.")
+
+    const { UnifiedOrder } = require("../models/unifiedOrder.js");
+    const { DeliveryRecord } = require("../models/index.js");
+    const argon2 = require("argon2");
+    
+    const existingTrip = await Trip.findOne({ 
+      serviceDate: parsed.data.serviceDate, 
+      vehicleId: parsed.data.vehicleId, 
+      driverId: parsed.data.driverId,
+      status: { $ne: "cancelled" }
+    });
+    if (existingTrip) {
+      // Idempotent: return the existing trip if it matches the vehicle and driver on the same day
+      return reply.status(200).send(ok(request, existingTrip.toObject()));
+    }
+    
+    const session = await mongoose.startSession()
+    let published: any = null
+    try {
+      await session.withTransaction(async () => {
+        const uOrders = await UnifiedOrder.find({ _id: { $in: parsed.data.stops.map((s: any) => s.unifiedOrderId) } }).session(session);
+        const uOrderMap = new Map(uOrders.map((o: any) => [String(o._id), o]));
+        
+        const realOrderIds: any[] = [];
+        const realOrders: any[] = [];
+        
+        for (const stop of parsed.data.stops) {
+          const uo: any = uOrderMap.get(stop.unifiedOrderId);
+          if (!uo) throw notFound("UnifiedOrder not found: " + stop.unifiedOrderId);
+          if (uo.status === "Scheduled") throw conflict("ORDER_ALLOCATION_CONFLICT", "Order already allocated");
+          
+          let brand = uo.type || "Fresh";
+          let orderType = brand === "Fresh" ? "dry" : "products";
+          const order = await Order.create([{
+            orderNumber: `TRP-${parsed.data.serviceDate.replaceAll("-", "")}-${uo._id.toString().slice(-6).toUpperCase()}`,
+            outletId: uo.storeId === "store-1" ? "OUT076" : uo.storeId,
+            storeManagerId: auth.userId,
+            brand,
+            orderType,
+            requestedDate: parsed.data.serviceDate,
+            cutoffBucket: "before_cutoff",
+            status: "allocated",
+            items: uo.items.map((item: any) => ({ sku: item.name.toLowerCase().replace(/\s+/g, '-'), name: item.name, quantity: item.qty || 1 })),
+            totalWeightKg: uo.kg || 10,
+            totalVolumeM3: (uo.kg || 10) / 100,
+          }], { session });
+          
+          realOrderIds.push(order[0]!._id);
+          realOrders.push(order[0]);
+          
+          uo.status = "Scheduled";
+          uo.stop = parsed.data.stops.indexOf(stop) + 1;
+          await uo.save({ session });
+        }
+        
+        const validation = await validateTrip({
+          serviceDate: parsed.data.serviceDate,
+          departureAt: parsed.data.departureAt,
+          plannedEndAt: parsed.data.plannedEndAt,
+          vehicleId: parsed.data.vehicleId,
+          driverId: parsed.data.driverId,
+          orderIds: realOrderIds.map(String),
+          plannedArrivals: Object.fromEntries(realOrderIds.map((id, i) => [String(id), parsed.data.stops[i]!.plannedArrivalAt])),
+          distanceKm: parsed.data.distanceKm
+        });
+        
+        if (!validation.valid) throw unprocessable("TRIP_CONSTRAINTS_FAILED", "The trip does not satisfy all hard constraints.", validation)
+        
+        const trip = await Trip.create([{
+          tripNumber: `TRP-${parsed.data.serviceDate.replaceAll("-", "")}-${require("node:crypto").randomBytes(3).toString("hex").toUpperCase()}`,
+          serviceDate: parsed.data.serviceDate,
+          departureAt: parsed.data.departureAt,
+          plannedEndAt: parsed.data.plannedEndAt,
+          vehicleId: parsed.data.vehicleId,
+          driverId: parsed.data.driverId,
+          distanceKm: parsed.data.distanceKm,
+          depot: vehicle.depot,
+          dispatcherId: auth.userId,
+          status: "published",
+          stops: parsed.data.stops.map((stop: any, index: number) => ({
+            stopId: `STOP-${index + 1}`,
+            orderId: realOrderIds[index],
+            outletId: realOrders[index].outletId,
+            sequence: index + 1,
+            plannedArrivalAt: stop.plannedArrivalAt
+          })),
+          constraintCheck: { checkedAt: new Date(), valid: true, rules: validation.rules },
+          statusHistory: [{ status: "published", at: new Date(), actorId: auth.userId }],
+        }], { session });
+        
+        const loadItems = [...trip[0]!.stops].reverse().flatMap((stop: any) => {
+          const o = realOrders.find(ro => String(ro._id) === String(stop.orderId));
+          return (o?.items ?? []).map((item: any) => ({
+            itemId: `${stop!.stopId}-${item.sku}`,
+            stopId: stop!.stopId,
+            orderId: stop.orderId,
+            sku: item.sku,
+            name: item.name,
+            expectedQuantity: item.quantity
+          }))
+        });
+        await LoadRecord.create([{ tripId: trip[0]!._id, depot: trip[0]!.depot, status: "available", items: loadItems }], { session });
+        
+        for (let i = 0; i < trip[0]!.stops.length; i++) {
+          const stop = trip[0]!.stops[i];
+          const order = realOrders[i];
+          const pin = String(Math.floor(1000 + Math.random() * 9000));
+          const pinHash = await argon2.hash(pin);
+          const uo: any = uOrderMap.get(parsed.data.stops[i]!.unifiedOrderId);
+          uo.set('deliveryPin', pin, { strict: false });
+          uo.set('eta', new Date(stop!.plannedArrivalAt!).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}), { strict: false });
+          await uo.save({ session });
+          
+          await DeliveryRecord.create([{
+            tripId: trip[0]!._id,
+            stopId: stop!.stopId,
+            orderId: order._id,
+            outletId: order.outletId,
+            driverId: auth.userId,
+            status: "planned",
+            items: order.items.map((item: any) => ({ orderId: order._id, sku: item.sku, expected: item.quantity, delivered: 0, short: 0, damaged: 0 })),
+            pinHash: pinHash,
+            pinExpiresAt: new Date(Date.now() + 24 * 60 * 60_000)
+          }], { session });
+        }
+        
+        published = trip[0];
+      })
+    } finally { await session.endSession() }
+    
+    await audit(request, "trip.published", "trip", published.id)
+    return reply.status(201).send(ok(request, published.toObject()))
+  })
+
+
 }

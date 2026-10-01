@@ -5,11 +5,11 @@ import { calmSpring } from "../../constants/springs"
 import { Button } from "../ui/Button"
 import type { OrderDetailState } from "../../types/index"
 
-export function OrderDetailHero({ onConfirmArrived, 
-  state,
-  onReviewDelivery,
+export function OrderDetailHero({ onConfirmArrived, state, onReviewDelivery, pin = "4827", eta = "06:40–07:00",
 }: {
   state: OrderDetailState
+  pin?: string
+  eta?: string
   onReviewDelivery: () => void
   onConfirmArrived: () => void
 }) {
@@ -76,7 +76,7 @@ export function OrderDetailHero({ onConfirmArrived,
           </span>
           <div className="order-hero-copy">
             <span className="field-label">Expected arrival</span>
-            <div className="tracking-eta">06:40–07:00</div>
+            <div className="tracking-eta">{eta}</div>
             <p>
               {state === "on-way"
                 ? "Vehicle departed at 05:48 · On schedule"
@@ -95,7 +95,7 @@ export function OrderDetailHero({ onConfirmArrived,
             <div className="order-hero-title">Verify delivery arrival</div>
             <p style={{ marginTop: 4, marginBottom: 16 }}>Give this 4-digit code to the driver to verify the delivery.</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              {["4", "8", "2", "7"].map((num, i) => (
+              {(pin || "4827").split("").map((num, i) => (
                 <div key={i} style={{ width: 48, height: 56, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, border: "1px solid var(--border)", borderRadius: 6, color: "var(--navy-900)", background: "var(--navy-50)" }}>{num}</div>
               ))}
             </div>

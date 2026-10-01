@@ -18,15 +18,15 @@ export function getCatalogue(business: keyof typeof brandName, type: string) {
   return apiRequest<ApiProduct[]>(`/catalog/products?${query}`)
 }
 
-export function submitStoreOrder(input: { business: keyof typeof brandName; type: string; items: Array<{ id: string; quantity: number }> }) {
+export async function submitStoreOrder(input: { business: keyof typeof brandName; type: string; items: Array<{ id: string; quantity: number }> }) {
   const kg = input.items.reduce((acc, item) => acc + (item.quantity * 10), 0) // rough estimation
   return apiRequest<CreatedOrder>("/unified/orders", {
     method: "POST",
     headers: { "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify({ 
-      storeId: "store-1",
+      storeId: (await getStoreContext()).outlet.outletId,
       storeName: "Waypoint " + brandName[input.business],
-      town: "Kandy City",
+      town: (await getStoreContext()).outlet.district,
       type: brandName[input.business],
       itemsSummary: input.items.length + " items",
       kg: kg,

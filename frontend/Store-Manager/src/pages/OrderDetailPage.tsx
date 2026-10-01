@@ -13,6 +13,7 @@ import type { StatusKind, OrderDetailState } from "../types/index"
 import { mockDrafts } from "../types/index"
 import { formatOutlet, formatOrderType, getDefaultOrderType, selectedProducts } from "../utils/index"
 import { getDraft } from "../data/mockData"
+import { listStoreOrders } from "../services/store"
 
 export function OrderDetailPage({
   orderId = "ORD-1082",
@@ -39,6 +40,15 @@ export function OrderDetailPage({
   
   const [warehouseIssue, setWarehouseIssue] = useState(false)
   const [wasDeferred, setWasDeferred] = useState(state === "deferred")
+  const [realOrder, setRealOrder] = useState<any>(null)
+  
+  useEffect(() => {
+    if (!orderId) return
+    listStoreOrders(business).then(orders => {
+      const match = orders.find(o => String(o.id) === orderId || String(o._id) === orderId);
+      if (match) setRealOrder(match);
+    }).catch(console.error)
+  }, [orderId, business])
   
   useEffect(() => {
     if (state === "deferred") setWasDeferred(true)
@@ -138,7 +148,7 @@ export function OrderDetailPage({
           
 
 
-          <OrderDetailHero state={state} onReviewDelivery={onReviewDelivery} onConfirmArrived={() => onStateChange("awaiting-confirmation")} />
+          <OrderDetailHero state={state} onReviewDelivery={onReviewDelivery} onConfirmArrived={() => onStateChange("awaiting-confirmation")} pin={realOrder?.deliveryPin} eta={realOrder?.eta} />
 
 {state === "deferred" && (
             <motion.div className="delivery-update-card" style={{ marginTop: -16, marginBottom: 24 }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={calmSpring}>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { apiRequest } from "../services/client"
 import {
   type Order,
   type Vehicle,
@@ -160,6 +161,7 @@ export function usePlanningState({ navigate, setToast }: UsePlanningStateProps) 
     return value.toISOString().slice(0, 10)
   }
 
+  
   const publishSchedule = async (
     scheduled: Order[],
     vehicle: Vehicle,
@@ -170,19 +172,35 @@ export function usePlanningState({ navigate, setToast }: UsePlanningStateProps) 
       Boolean(order.apiId),
     )
 
-    for (const order of liveOrders) {
-      await fetch(
-        `${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000"}/api/v1/unified/orders/${order.apiId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+    if (liveOrders.length > 0) {
+      const departureAt = new Date(`${targetDate}T${departureTime}:00`);
+      const plannedEndAt = new Date(departureAt.getTime() + 4 * 60 * 60 * 1000); // 4 hours later
+
+      
+      try {
+        await apiRequest("/planning/unified-trips", {
+          method: "POST",
           body: JSON.stringify({
-            status: "Scheduled",
-            stop: scheduled.indexOf(order) + 1,
-          }),
-        },
-      )
+            serviceDate: targetDate,
+            departureAt,
+            plannedEndAt,
+            vehicleId: vehicle.id || vehicle.vehicleId || String(vehicle._id),
+            driverId: selectedDriverId,
+            distanceKm: parseFloat(distanceKm || "0") || 50,
+            stops: liveOrders.map((order, i) => ({
+              unifiedOrderId: order.apiId,
+              plannedArrivalAt: new Date(departureAt.getTime() + (i + 1) * 30 * 60 * 1000)
+            }))
+          })
+        });
+      } catch (err: any) {
+        console.error("Trip creation failed", err);
+        setToast(`Trip creation failed: ${err.message}`);
+        throw err;
+      }
     }
+
+
   }
 
   const finishSchedule = (message: string, scheduled: Order[], day?: number) => {
