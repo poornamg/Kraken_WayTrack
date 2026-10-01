@@ -1,76 +1,101 @@
-# WayLink hackathon system
+# WayLink Monorepo
 
-WayLink is a multi-application delivery planning and execution system. A Fastify API and MongoDB database support five React applications for the operational roles.
+Welcome to the WayLink monorepo. This repository contains the source code for the WayLink logistics system, spanning five separate frontend applications and a unified backend.
 
-## Applications
+## Structure
 
-| Application | Directory | Local port | Purpose |
-| --- | --- | ---: | --- |
-| API | `backend` | 3000 | Authentication, planning, loading, delivery and audit APIs |
-| Login | `Login` | 5173 | Shared role-aware sign-in |
-| Dispatcher | `dispatcher` | 5174 | Order review, planning and dispatch |
-| Loader | `loader` | 5175 | Load claiming, scanning and handoff |
-| Driver | `delivery-driver` | 5176 | Route execution and delivery proof |
-| Store Manager | `Store-Manager` | 5177 | Store ordering and delivery visibility |
-
-## Prerequisites
-
-- Node.js 24 or newer
-- npm 11 or newer
-- Docker with Compose support for the integrated environment
-
-The repository standardizes on npm and the committed `package-lock.json` in each package. Do not introduce a second package-manager lockfile.
-
-## Install and verify
-
-Install every package from its lock file:
-
-```powershell
-npm run bootstrap
+```
+/
+├── frontend/
+│   ├── Login/             (Role-based sign-in SPA)
+│   ├── Store-Manager/     (Store Manager app)
+│   ├── dispatcher/        (Dispatcher app)
+│   ├── loader/            (Loader app)
+│   └── delivery-driver/   (Driver app)
+├── backend/
+│   ├── src/
+│   │   ├── routes/        (API route definitions)
+│   │   ├── middleware/    (Auth, error handling, etc.)
+│   │   ├── services/      (Business logic / Constraints)
+│   │   ├── models/        (Mongoose database schemas)
+│   │   ├── config/        (Env vars & DB connections)
+│   │   └── utils/         (Shared utilities and seeders)
+│   ├── tests/
+│   ├── package.json
+│   └── Dockerfile
+├── docker-compose.yml     (Runs MongoDB and optionally backend API)
+└── package.json           (Convenience scripts)
 ```
 
-Run backend type checking and tests, then build the backend and all frontends:
+## Running Locally
 
-```powershell
-npm run verify
+To install and run everything locally, first install dependencies across the monorepo:
+
+```bash
+# Frontend Apps
+cd frontend/Login && npm install
+cd ../Store-Manager && npm install
+cd ../dispatcher && npm install
+cd ../loader && npm install
+cd ../delivery-driver && npm install
+
+# Backend
+cd ../../backend && npm install
 ```
 
-Individual builds are available as `build:backend`, `build:login`, `build:dispatcher`, `build:loader`, `build:driver` and `build:store`.
+### Starting the Database
 
-Validate all reference CSVs before starting MongoDB or writing seed data:
-
-```powershell
-npm run data:preflight
+```bash
+docker compose up -d mongo mongo-init
 ```
 
-The checked-in `CSC/products.demo.csv` is deliberately classified as a non-authoritative demo fixture. Replace `CSC_PRODUCTS_FILE` with the approved CSC extract when it is supplied; do not rename demo rows to make them appear official.
+### Running the Backend
 
-## Environment configuration
-
-Copy `.env.example` to `.env` for Docker Compose. Each application also has its own `.env.example` for direct local development.
-
-- Backend variables such as `MONGODB_URI`, `JWT_SECRET` and Cloudinary credentials are read at API runtime.
-- Variables beginning with `VITE_` are embedded into a frontend at build time. Rebuild that frontend after changing them.
-- `VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE` and `VITE_USE_MOCK_AUTH` must remain `false` outside explicit prototype sessions.
-- `VITE_SERVICE_DATE` exists to make the hackathon demo deterministic. Production deployments should omit it and use the server/calendar date policy.
-
-Never commit a real `.env` or production secret.
-
-## Docker Compose
-
-After environment and seed-data setup:
-
-```powershell
-docker compose config
-docker compose build
-docker compose up -d
-docker compose ps
+Ensure `.env` values are set appropriately (see `backend/.env.example`).
+```bash
+npm run dev:backend
 ```
 
-The integration stack includes MongoDB, replica-set initialization, deterministic seed execution, the API and all five web applications. See `COMPREHENSIVE_IMPLEMENTATION_PLAN_V2.md` for the remaining ordered implementation and verification work.
+### Running Frontend Apps
 
-## Documentation
+The root `package.json` provides scripts to easily start frontend applications from the root directory:
+```bash
+npm run dev:login
+npm run dev:store
+npm run dev:dispatcher
+npm run dev:loader
+npm run dev:driver
+```
 
-- `SYSTEM_REQUIREMENTS_AND_ARCHITECTURE.md` — required behavior and architecture
-- `COMPREHENSIVE_IMPLEMENTATION_PLAN_V2.md` — current execution plan
-- `IMPLEMENTATION_STATUS.md` — historical implementation snapshot; update it only after verified milestones
+## Deployment (Vercel)
+
+Each frontend application is designed to be deployed separately as a distinct project on Vercel. 
+Due to the monorepo structure, **you must configure the "Root Directory" for each Vercel project correctly**:
+
+| Vercel Project | Old Root Directory | New Root Directory |
+| --- | --- | --- |
+| Login | `Login` | `frontend/Login` |
+| Store Manager | `Store-Manager` | `frontend/Store-Manager` |
+| Dispatcher | `dispatcher` | `frontend/dispatcher` |
+| Loader | `loader` | `frontend/loader` |
+| Delivery Driver | `delivery-driver` | `frontend/delivery-driver` |
+
+### Environment Variables
+
+When deploying to Vercel, ensure the following environment variables are set for **each** respective frontend app:
+
+- **Login**:
+  - `VITE_API_BASE_URL` (e.g. `https://api.waylink.com`)
+  - `VITE_USE_MOCK_AUTH` (optional)
+- **Store Manager**:
+  - `VITE_API_BASE_URL`
+  - `VITE_SERVICE_DATE` (optional)
+- **Dispatcher**:
+  - `VITE_API_BASE_URL`
+  - `VITE_SERVICE_DATE` (optional)
+- **Loader**:
+  - `VITE_API_BASE_URL`
+- **Delivery Driver**:
+  - `VITE_API_BASE_URL`
+
+*(The backend API redirect URLs rely on the `LOGIN_ORIGIN`, `STORE_MANAGER_ORIGIN`, `DISPATCHER_ORIGIN`, `LOADER_ORIGIN`, and `DRIVER_ORIGIN` env values. These determine where users go post-login).*
