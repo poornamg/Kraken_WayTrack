@@ -46,8 +46,7 @@ const overlaySpring = {
   mass: 0.9,
 }
 
-type ButtonTone = "primary" | "secondary" | "issue"
-type ButtonSize = "default" | "mobile"
+
 
 function Button({
   children,
@@ -102,33 +101,8 @@ function IconButton({
   )
 }
 
-type StatusKind = "confirmed" | "scheduled" | "transit" | "arrived" | "deferred" | "awaiting" | "received" | "issue"
 
-const statusDetails: Record<StatusKind, {
-  label: string
-  icon: ReactNode
-}> = {
-  confirmed: { label: "Order confirmed", icon: <CheckCircle2 /> },
-  scheduled: { label: "Scheduled", icon: <CalendarDays /> },
-  transit: { label: "On the way", icon: <Truck /> },
-  arrived: { label: "Arrived", icon: <CheckCircle2 /> },
-  deferred: { label: "Deferred", icon: <Clock3 /> },
-  awaiting: { label: "Awaiting confirmation", icon: <CircleAlert /> },
-  received: { label: "Receipt confirmed", icon: <PackageCheck /> },
-  issue: { label: "Receipt confirmed with issue", icon: <AlertTriangle /> },
-}
 
-function formatOutlet(business: "fresh" | "style" | "tech" = "fresh") {
-  if (business === "style") return "Waypoint Style · Kandy City"
-  if (business === "tech") return "Waypoint Tech · Kandy City"
-  return "Waypoint Fresh · Kandy City"
-}
-function formatOrderType(business: "fresh" | "style" | "tech" = "fresh", type: OrderType = "dry") {
-  if (business === "style") return "Style stock"
-  if (business === "tech") return "Tech stock"
-  if (type === "dry") return "Dry groceries"
-  return "Chilled / Frozen"
-}
 
 function StatusPill({ kind }: { kind: StatusKind }) {
   const status = statusDetails[kind]
@@ -1558,15 +1532,6 @@ function NextDeliveryHero({ onOpen, business = "fresh" }: { onOpen?: () => void,
   )
 }
 
-type UpcomingDelivery = {
-  id: string
-  type: string
-  date: string
-  status: "confirmed" | "scheduled" | "deferred"
-  eta: string
-  reason?: string
-}
-
 
 function getUpcomingDeliveries(business: "fresh" | "style" | "tech") {
   return [
@@ -1807,80 +1772,9 @@ function HomePage({
   )
 }
 
-type OrderType = "dry" | "chilled" | "products"
-type OrderDrafts = Record<OrderType, Record<string, number>>
-
-type CatalogProduct = {
-  id: string
-  name: string
-  unit: string
-}
-
-const productCatalog: Record<"fresh" | "style" | "tech", Partial<Record<OrderType, CatalogProduct[]>>> = {
-  fresh: {
-    dry: [
-      { id: "rice", name: "Rice", unit: "bag" },
-      { id: "milk-powder", name: "Milk powder", unit: "carton" },
-      { id: "flour", name: "Flour", unit: "bag" },
-      { id: "cooking-oil", name: "Cooking oil", unit: "bottle" },
-      { id: "canned-goods", name: "Canned goods", unit: "carton" },
-    ],
-    chilled: [
-      { id: "fresh-milk", name: "Fresh milk", unit: "carton" },
-      { id: "chicken", name: "Chicken", unit: "kg" },
-      { id: "frozen-vegetables", name: "Frozen vegetables", unit: "box" },
-      { id: "yoghurt", name: "Yoghurt", unit: "crate" },
-      { id: "frozen-meat", name: "Frozen meat", unit: "box" },
-    ],
-  },
-  style: {
-    products: [
-      { id: "t-shirts", name: "T-shirts", unit: "piece" },
-      { id: "shirts", name: "Shirts", unit: "piece" },
-      { id: "trousers", name: "Trousers", unit: "piece" },
-      { id: "dresses", name: "Dresses", unit: "piece" },
-      { id: "jackets", name: "Jackets", unit: "piece" },
-      { id: "shoes", name: "Shoes", unit: "pair" },
-      { id: "sandals", name: "Sandals", unit: "pair" },
-      { id: "bags", name: "Bags", unit: "piece" },
-      { id: "belts", name: "Belts", unit: "piece" },
-      { id: "caps", name: "Caps", unit: "piece" },
-    ],
-  },
-  tech: {
-    products: [
-      { id: "laptops", name: "Laptops", unit: "unit" },
-      { id: "smartphones", name: "Smartphones", unit: "unit" },
-      { id: "monitors", name: "Monitors", unit: "unit" },
-      { id: "tablets", name: "Tablets", unit: "unit" },
-      { id: "keyboards", name: "Keyboards", unit: "unit" },
-      { id: "mice", name: "Mice", unit: "unit" },
-      { id: "chargers", name: "Chargers", unit: "unit" },
-      { id: "headsets", name: "Headsets", unit: "unit" },
-      { id: "cables", name: "Cables", unit: "unit" },
-      { id: "battery-packs", name: "Battery packs", unit: "unit" },
-    ],
-  },
-}
-
-const mockDrafts: Record<"fresh" | "style" | "tech", Record<OrderType, Record<string, number>>> = {
-  fresh: {
-    dry: { rice: 20, "milk-powder": 30, flour: 10, "cooking-oil": 20 },
-    chilled: { "fresh-milk": 12, chicken: 8 },
-  },
-  style: {
-    products: { "t-shirts": 30, shirts: 20, trousers: 15, shoes: 12, dresses: 5, jackets: 4 },
-  },
-  tech: {
-    products: { laptops: 6, smartphones: 12, monitors: 8, keyboards: 15, tablets: 10 },
-  },
-} as any
 
 
-function getDefaultOrderType(business: "fresh" | "style" | "tech"): OrderType {
-  if (business === "fresh") return "dry"
-  return "products"
-}
+
 
 function getCatalog(business: "fresh" | "style" | "tech", type: OrderType): CatalogProduct[] {
   const catalog = productCatalog[business] as Record<string, CatalogProduct[]>
@@ -1892,16 +1786,7 @@ function getDraft(drafts: OrderDrafts, type: OrderType): Record<string, number> 
   return safeDrafts[type] || {}
 }
 
-function pluralizeUnit(unit: string, quantity: number) {
-  if (quantity === 1 || unit === "kg") return unit
-  return unit + "s"
-}
 
-function selectedProducts(business: "fresh" | "style" | "tech", type: OrderType, quantities: Record<string, number> | undefined): Array<CatalogProduct & { quantity: number }> {
-  return getCatalog(business, type)
-    .map((product) => ({ ...product, quantity: (quantities && quantities[product.id]) ?? 0 }))
-    .filter((product) => product.quantity > 0)
-}
 
 function OrderTypeSelector({
   type,
@@ -2567,7 +2452,6 @@ function ReviewProductList({
   )
 }
 
-type SubmissionState = "idle" | "submitting" | "error"
 
 function SubmissionError({
   onRetry,
@@ -2866,7 +2750,6 @@ function OrderConfirmationPage({ business,
   )
 }
 
-type OrderDetailState = "confirmed" | "deferred" | "scheduled" | "on-way" | "arrived" | "awaiting-confirmation" | "receipt-confirmed" | "receipt-issue"
 
 const orderDetailStages = [
   "Order confirmed",
@@ -3579,10 +3462,6 @@ function OrderDetailPage({
     </div>
   )
 }
-
-type ReceiptFlowState = "verify" | "full" | "issue-edit" | "issue-review" | "confirmed" | "confirmed-issue"
-
-type ReceiptIssueType = "good" | "missing" | "damaged" | "temperature" | "wrong-variant" | "wrong-item" | "seal" | "condition" | "other"
 
 
 
