@@ -24,7 +24,7 @@ import {
   UserRound,
   X,
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import wayTrackLogo from "./assets/waytrack-logo.png"
 import { planningApi, type DriverReference, type TripInput } from "./api/planning"
 import { apiRequest } from "./api/client"
@@ -694,6 +694,76 @@ function HomePage({
           orders={orders}
         />
       ) : null}
+    </section>
+  )
+}
+
+function LivePlanningHome({
+  serviceDate,
+  availableServiceDates,
+  orders,
+  filter,
+  setFilter,
+  onDateChange,
+  onRefresh,
+  refreshing,
+  error,
+  navigate,
+}: {
+  serviceDate: string
+  availableServiceDates: string[]
+  orders: Order[]
+  filter: ShopType | null
+  setFilter: React.Dispatch<React.SetStateAction<ShopType | null>>
+  onDateChange: (date: string) => void
+  onRefresh: () => void
+  refreshing: boolean
+  error: string
+  navigate: (path: string) => void
+}) {
+  const visibleOrders = filter ? orders.filter((order) => order.type === filter) : orders
+  const dateLabel = serviceDate ? new Intl.DateTimeFormat("en", { dateStyle: "full", timeZone: "Asia/Colombo" }).format(new Date(`${serviceDate}T00:00:00+05:30`)) : "No open planning date"
+  const brandCount = (brand: ShopType) => orders.filter((order) => order.type === brand).length
+
+  return (
+    <section className="page page-enter">
+      <div className="page-heading">
+        <div className="home-title-row">
+          <PageTitle>Dispatcher home</PageTitle>
+          <span className="plan-pill">Open planning queue · {orders.length}</span>
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "end" }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>Planning date</span>
+            <select value={serviceDate} onChange={(event) => onDateChange(event.target.value)}>
+              {availableServiceDates.map((date) => <option key={date} value={date}>{date}</option>)}
+            </select>
+          </label>
+          <Button disabled={refreshing} onClick={onRefresh} variant="secondary">{refreshing ? "Refreshing…" : "Refresh orders"}</Button>
+        </div>
+      </div>
+      {error ? <div className="toast" role="alert"><AlertCircle aria-hidden="true" size={19} />{error}</div> : null}
+      <div className="workspace-card" style={{ padding: 24 }}>
+        <div className="section-heading">
+          <div><Heading>Orders awaiting scheduling</Heading><span>{dateLabel}</span></div>
+          <Button disabled={!visibleOrders.length} onClick={() => navigate("/schedule")} variant="primary">Schedule orders <ArrowRight size={18} /></Button>
+        </div>
+        <div className="filter-grid" style={{ marginBottom: 20 }}>
+          {(["Fresh", "Tech", "Style"] as const).map((brand) => <FilterCard key={brand} type={brand} count={brandCount(brand)} active={filter === brand} onClick={() => setFilter(filter === brand ? null : brand)} />)}
+        </div>
+        {visibleOrders.length ? (
+          <div className="future-order-list">
+            {visibleOrders.map((order) => (
+              <UnstyledButton className="future-order-row" key={order.apiId ?? order.id} onClick={() => navigate(`/schedule?order=${encodeURIComponent(order.id)}`)}>
+                <span><span className="data-text">{order.id}</span><ShopTag type={order.type} /><small>{order.shop} · {order.town} · {order.items} · {order.kg.toLocaleString()} kg</small></span>
+                <b>Not scheduled</b>
+              </UnstyledButton>
+            ))}
+          </div>
+        ) : (
+          <div className="calendar-empty"><CheckCircle2 aria-hidden="true" size={32} /><strong>No orders are waiting for this planning date</strong><span>New Store Manager submissions will appear here automatically.</span></div>
+        )}
+      </div>
     </section>
   )
 }
@@ -2425,6 +2495,9 @@ export default function App() {
 
   const prototypeMode = import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE === "true"
   const [serviceDate, setServiceDate] = useState(import.meta.env.VITE_SERVICE_DATE ?? "")
+  const [availableServiceDates, setAvailableServiceDates] = useState<string[]>([])
+  const [planningError, setPlanningError] = useState("")
+  const [planningRefreshing, setPlanningRefreshing] = useState(false)
   const [vehicles, setVehicles] = useState<Vehicle[]>(prototypeMode ? initialVehicles : [])
   const [drivers, setDrivers] = useState<DriverReference[]>([])
   const [selectedDriverId, setSelectedDriverId] = useState("")
@@ -2434,13 +2507,24 @@ export default function App() {
   const [routes, setRoutes] = useState<RouteRecord[]>(prototypeMode ? initialRoutes : [])
   const [remarks, setRemarks] = useState<Remark[]>(initialRemarks)
 
-  useEffect(() => {
+  const refreshPlanningData = useCallback(async () => {
     if (prototypeMode) return
-    void planningApi.orders(serviceDate || undefined).then(async (allOrders) => {
-        const planningDate = serviceDate || allOrders.map((order) => order.requestedDate).sort()[0]
-        if (!planningDate) { setOrders([]); setVehicles([]); return }
-        setServiceDate(planningDate)
-        const apiOrders = allOrders.filter((order) => order.requestedDate === planningDate)
+    setPlanningRefreshing(true)
+    try {
+      const allOrders = await planningApi.orders()
+      const dates = [...new Set(allOrders.map((order) => order.requestedDate))].sort()
+      setAvailableServiceDates(dates)
+      const configuredDate = import.meta.env.VITE_SERVICE_DATE as string | undefined
+      const planningDate = serviceDate && dates.includes(serviceDate) ? serviceDate : configuredDate && dates.includes(configuredDate) ? configuredDate : dates[0]
+      if (!planningDate) {
+        setOrders([])
+        setVehicles([])
+        setDrivers([])
+        setPlanningError("")
+        return
+      }
+      if (planningDate !== serviceDate) setServiceDate(planningDate)
+      const apiOrders = allOrders.filter((order) => order.requestedDate === planningDate)
         const [apiVehicles, apiDrivers] = await Promise.all([planningApi.vehicles(planningDate), planningApi.drivers()])
         setOrders(apiOrders.map((order) => ({
           apiId: order._id,
@@ -2470,13 +2554,27 @@ export default function App() {
         })))
         setDrivers(apiDrivers)
         if (apiDrivers.length === 1) setSelectedDriverId(apiDrivers[0]._id)
-      })
-      .catch((error) => {
-        console.error("Dispatcher planning data request failed", error)
-        setOrders([])
-        setVehicles([])
-      })
-  }, [prototypeMode])
+      setPlanningError("")
+    } catch (error) {
+      setPlanningError(error instanceof Error ? error.message : "Unable to refresh the planning queue.")
+    } finally {
+      setPlanningRefreshing(false)
+    }
+  }, [prototypeMode, serviceDate])
+
+  useEffect(() => {
+    if (prototypeMode) return
+    void refreshPlanningData()
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") void refreshPlanningData() }
+    const interval = window.setInterval(refreshWhenVisible, 15_000)
+    window.addEventListener("focus", refreshWhenVisible)
+    document.addEventListener("visibilitychange", refreshWhenVisible)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener("focus", refreshWhenVisible)
+      document.removeEventListener("visibilitychange", refreshWhenVisible)
+    }
+  }, [prototypeMode, refreshPlanningData])
 
   const [manageVehiclesOpen, setManageVehiclesOpen] = useState(false)
   const [deferOpen, setDeferOpen] = useState(false)
@@ -2633,10 +2731,12 @@ export default function App() {
     <AppShell navigate={navigate} path={path}>
       {path === "/schedule" && !prototypeMode ? (
         <div style={{ display: "flex", gap: 16, alignItems: "end", padding: "16px 24px", background: "white", borderBottom: "1px solid var(--navy-100)" }}>
+          <label style={{ display: "grid", gap: 6 }}><span>Planning date</span><select value={serviceDate} onChange={(event) => setServiceDate(event.target.value)}>{availableServiceDates.map((date) => <option key={date} value={date}>{date}</option>)}</select></label>
           <label style={{ display: "grid", gap: 6, minWidth: 260 }}><span>Assigned driver</span><select value={selectedDriverId} onChange={(event) => setSelectedDriverId(event.target.value)}><option value="">Select a driver</option>{drivers.map((driver) => <option key={driver._id} value={driver._id}>{driver.name} · {driver.employeeId}</option>)}</select></label>
           <label style={{ display: "grid", gap: 6 }}><span>Planned distance (km)</span><input min="0.1" step="0.1" type="number" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} /></label>
           <label style={{ display: "grid", gap: 6 }}><span>Planned duration (minutes)</span><input min="1" step="1" type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} /></label>
-          <span>Planning date · {serviceDate}</span>
+          <button disabled={planningRefreshing} onClick={() => void refreshPlanningData()} type="button">{planningRefreshing ? "Refreshing…" : "Refresh orders"}</button>
+          {planningError ? <span role="alert" style={{ color: "var(--critical-500)" }}>{planningError}</span> : null}
         </div>
       ) : null}
       {path === "/schedule" &&
@@ -2701,17 +2801,32 @@ export default function App() {
           setRemarks={setRemarks}
         />
       ) : (
-        <HomePage
-          approved={approved}
-          filter={homeFilter}
-          navigate={navigate}
-          orders={orders}
-          routes={routes}
-          setFilter={setHomeFilter}
-          setViewDate={setViewDate}
-          toast={toast}
-          viewDate={viewDate}
-        />
+        prototypeMode ? (
+          <HomePage
+            approved={approved}
+            filter={homeFilter}
+            navigate={navigate}
+            orders={orders}
+            routes={routes}
+            setFilter={setHomeFilter}
+            setViewDate={setViewDate}
+            toast={toast}
+            viewDate={viewDate}
+          />
+        ) : (
+          <LivePlanningHome
+            availableServiceDates={availableServiceDates}
+            error={planningError}
+            filter={homeFilter}
+            navigate={navigate}
+            onDateChange={setServiceDate}
+            onRefresh={() => void refreshPlanningData()}
+            orders={orders}
+            refreshing={planningRefreshing}
+            serviceDate={serviceDate}
+            setFilter={setHomeFilter}
+          />
+        )
       )}
 
       {/* Global Modals for Defer & Manage Vehicles */}

@@ -10,6 +10,7 @@ import { authenticateRequest } from "./common/auth.js"
 import { AppError } from "./common/errors.js"
 import { ok } from "./common/response.js"
 import { databaseReady } from "./database/connection.js"
+import { CalendarDay, Outlet, Product, Vehicle } from "./database/models/index.js"
 import { authRoutes } from "./modules/auth/routes.js"
 import { referenceRoutes } from "./modules/reference/routes.js"
 import { orderRoutes } from "./modules/orders/routes.js"
@@ -73,10 +74,18 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
 
   app.get("/health/live", async (request) => ok(request, { status: "alive", version: "1.0.0" }))
   app.get("/health/ready", async (request, reply) => {
-    const ready = databaseReady()
+    const database = databaseReady()
+    const referenceCounts = database ? await Promise.all([
+      Outlet.countDocuments({ active: true }).limit(1),
+      Vehicle.countDocuments({ active: true }).limit(1),
+      Product.countDocuments({ active: true }).limit(1),
+      CalendarDay.countDocuments({ isOperating: true }).limit(1),
+    ]) : [0, 0, 0, 0]
+    const missingReferenceData = ["outlets", "vehicles", "products", "calendar"].filter((_, index) => referenceCounts[index] === 0)
+    const ready = database && missingReferenceData.length === 0
     return reply.status(ready ? 200 : 503).send({
       success: ready,
-      data: { status: ready ? "ready" : "not_ready", database: mongoose.connection.readyState },
+      data: { status: ready ? "ready" : "not_ready", database: mongoose.connection.readyState, missingReferenceData },
       requestId: request.id,
     })
   })
