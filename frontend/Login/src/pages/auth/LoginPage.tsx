@@ -1,7 +1,6 @@
 import { IdIcon, LockIcon, EyeIcon, EyeOffIcon, AlertIcon } from "../../components/ui/Icons.js"
-import { useState, useRef, type FormEvent } from "react"
+import { useAuthForm } from "../../hooks/useAuthForm.js"
 import { AuthLayout } from "./AuthLayout"
-import { authApi } from "@/auth"
 import { PROTOTYPE_USERS } from "@/data/mockUsers"
 
 const isMock = import.meta.env.VITE_USE_MOCK_AUTH === "true"
@@ -11,35 +10,14 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ navigate }: LoginPageProps) {
-  const [employeeId, setEmployeeId] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPw, setShowPw] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const idRef = useRef<HTMLInputElement>(null)
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-    try {
-      const result = await authApi.login(employeeId.toUpperCase(), password, email)
-      window.location.replace(result.redirectUrl)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function fillRow(id: string, pw: string, recordedEmail: string) {
-    setEmployeeId(id)
-    setPassword(pw)
-    setEmail(recordedEmail)
-    idRef.current?.focus()
-  }
-
+    const {
+    employeeId, setEmployeeId,
+    email, setEmail,
+    password, setPassword,
+    showPw, setShowPw,
+    loading, error,
+    idRef, handleSubmit, fillRow
+  } = useAuthForm()
   return (
     <AuthLayout>
       <form onSubmit={handleSubmit} noValidate>
