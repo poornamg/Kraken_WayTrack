@@ -1,12 +1,12 @@
 import argon2 from "argon2"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { randomCode, sha256 } from "../utils/crypto.js"
-import { badRequest, forbidden, unauthorized } from "../middleware/errors.js"
-import { issueAccessToken } from "../middleware/auth.js"
-import { noContent, ok } from "../utils/response.js"
+import { randomCode, sha256 } from "../common/utils/crypto.js"
+import { badRequest, forbidden, unauthorized } from "../common/errors/index.js"
+import { issueAccessToken } from "../common/middleware/auth.js"
+import { noContent, ok } from "../common/utils/response.js"
 import { AuthHandoff, User } from "../models/index.js"
-import { audit } from "../utils/audit.js"
+import { audit } from "../common/utils/audit.js"
 
 const loginBody = z.object({
   employeeId: z.string().trim().min(1).max(32).transform((value) => value.toUpperCase()),

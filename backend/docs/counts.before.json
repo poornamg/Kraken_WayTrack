@@ -1,0 +1,18 @@
+{
+  "deliveryrecords": 0,
+  "operationalevents": 29,
+  "unifiedorders": 22,
+  "fileassets": 0,
+  "products": 4,
+  "orders": 0,
+  "outlets": 120,
+  "triplocations": 0,
+  "vehicles": 60,
+  "idempotencyrecords": 0,
+  "trips": 0,
+  "authhandoffs": 4,
+  "loadrecords": 0,
+  "users": 7,
+  "syncreceipts": 0,
+  "calendardays": 916
+}

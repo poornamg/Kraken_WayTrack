@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify"
 import { stableHash } from "./crypto.js"
-import { conflict } from "../middleware/errors.js"
-import { IdempotencyRecord } from "../models/index.js"
+import { conflict } from "../errors/index.js"
+import { IdempotencyRecord } from "../../models/index.js"
 
 export async function findIdempotentResult(request: FastifyRequest, operation: string, payload: unknown) {
   const key = request.headers["idempotency-key"]

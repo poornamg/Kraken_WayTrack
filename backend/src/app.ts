@@ -6,9 +6,9 @@ import swagger from "@fastify/swagger"
 import { ZodError } from "zod"
 import mongoose from "mongoose"
 import type { AppConfig } from "./config/env.js"
-import { authenticateRequest } from "./middleware/auth.js"
-import { AppError } from "./middleware/errors.js"
-import { ok } from "./utils/response.js"
+import { authenticateRequest } from "./common/middleware/auth.js"
+import { AppError } from "./common/errors/index.js"
+import { ok } from "./common/utils/response.js"
 import { databaseReady } from "./config/connection.js"
 import { CalendarDay, Outlet, Product, Vehicle } from "./models/index.js"
 import { authRoutes } from "./routes/auth.js"
@@ -110,9 +110,9 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
-      return reply.status(error.statusCode).send({
+      return reply.status((error.statusCode || 500)).send({
         success: false,
-        error: { code: error.code, message: error.message, ...(error.details === undefined ? {} : { details: error.details }) },
+        error: { code: error.code, message: error.message, ...((error as any).details === undefined ? {} : { details: (error as any).details }) },
         requestId: request.id,
       })
     }

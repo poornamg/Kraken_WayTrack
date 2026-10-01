@@ -1,0 +1,163 @@
+{
+  "auth_login_store": 200,
+  "auth_login_dispatcher": 200,
+  "auth_login_loader": 200,
+  "auth_login_driver": 200,
+  "auth_me": {
+    "status": 200,
+    "keys": [
+      "success",
+      "data",
+      "requestId"
+    ],
+    "dataKeys": [
+      "id",
+      "employeeId",
+      "email",
+      "name",
+      "role",
+      "depot"
+    ]
+  },
+  "ref_outlets": {
+    "status": 200,
+    "keys": [
+      "success",
+      "data",
+      "meta",
+      "requestId"
+    ],
+    "dataKeys": [
+      "_id",
+      "outletId",
+      "active",
+      "brand",
+      "createdAt",
+      "depot",
+      "displayName",
+      "district",
+      "dockType",
+      "parkingConstraint",
+      "source",
+      "updatedAt",
+      "version",
+      "windowCloseTime",
+      "windowOpenTime"
+    ]
+  },
+  "ref_vehicles": {
+    "status": 400,
+    "keys": [
+      "statusCode",
+      "code",
+      "error",
+      "message"
+    ],
+    "dataKeys": null
+  },
+  "ref_calendar": {
+    "status": 404,
+    "keys": [
+      "success",
+      "error",
+      "requestId"
+    ],
+    "dataKeys": null
+  },
+  "ref_products": {
+    "status": 404,
+    "keys": [
+      "success",
+      "error",
+      "requestId"
+    ],
+    "dataKeys": null
+  },
+  "uo_create": {
+    "status": 201,
+    "keys": [
+      "success",
+      "data",
+      "requestId"
+    ],
+    "dataKeys": [
+      "storeId",
+      "storeName",
+      "town",
+      "type",
+      "itemsSummary",
+      "items",
+      "kg",
+      "emergency",
+      "inReach",
+      "suggested",
+      "deferred",
+      "status",
+      "createdAt",
+      "updatedAt",
+      "id"
+    ]
+  },
+  "uo_list": {
+    "status": 200,
+    "keys": [
+      "success",
+      "data",
+      "requestId"
+    ],
+    "dataKeys": [
+      "storeId",
+      "storeName",
+      "town",
+      "type",
+      "itemsSummary",
+      "items",
+      "kg",
+      "emergency",
+      "inReach",
+      "suggested",
+      "deferred",
+      "status",
+      "createdAt",
+      "updatedAt",
+      "id"
+    ]
+  },
+  "planning_unified_trips": {
+    "status": 400,
+    "keys": [
+      "statusCode",
+      "code",
+      "error",
+      "message"
+    ],
+    "dataKeys": null
+  },
+  "load_jobs": {
+    "status": 200,
+    "keys": [
+      "success",
+      "data",
+      "requestId"
+    ],
+    "dataKeys": "empty_array"
+  },
+  "driver_routes": {
+    "status": 200,
+    "keys": [
+      "success",
+      "data",
+      "requestId"
+    ],
+    "dataKeys": "empty_array"
+  },
+  "ops_deliveries": {
+    "status": 200,
+    "keys": [
+      "success",
+      "data",
+      "requestId"
+    ],
+    "dataKeys": "empty_array"
+  }
+}

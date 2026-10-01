@@ -1,6 +1,6 @@
 import { DateTime } from "luxon"
 import { CalendarDay, Order, Outlet, Trip, Vehicle } from "../models/index.js"
-import { OPERATING_ZONE } from "../utils/time.js"
+import { OPERATING_ZONE } from "../common/utils/time.js"
 
 export type RuleResult = { code: string; passed: boolean; message: string; actual?: unknown; threshold?: unknown }
 

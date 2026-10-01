@@ -1,5 +1,5 @@
 import { DateTime } from "luxon"
-import { badRequest } from "../middleware/errors.js"
+import { badRequest } from "../errors/index.js"
 
 export const OPERATING_ZONE = "Asia/Colombo"
 

@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { requireRole } from "../middleware/auth.js"
-import { audit } from "../utils/audit.js"
-import { badRequest, conflict, notFound } from "../middleware/errors.js"
-import { pagination, paginationSchema } from "../utils/pagination.js"
-import { ok, page } from "../utils/response.js"
-import { expectedVersion } from "../utils/version.js"
+import { requireRole } from "../common/middleware/auth.js"
+import { audit } from "../common/utils/audit.js"
+import { badRequest, conflict, notFound } from "../common/errors/index.js"
+import { pagination, paginationSchema } from "../common/utils/pagination.js"
+import { ok, page } from "../common/utils/response.js"
+import { expectedVersion } from "../common/utils/version.js"
 import { DeliveryRecord, OperationalEvent, Order, Trip, TripLocation, User } from "../models/index.js"
 
 async function storeOutlet(userId: string) {

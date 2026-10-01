@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify"
-import { conflict } from "../middleware/errors.js"
+import { conflict } from "../errors/index.js"
 
 export function expectedVersion(request: FastifyRequest, bodyVersion?: number) {
   const header = request.headers["if-match"]

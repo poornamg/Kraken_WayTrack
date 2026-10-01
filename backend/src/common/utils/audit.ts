@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify"
-import { OperationalEvent } from "../models/index.js"
+import { OperationalEvent } from "../../models/index.js"
 
 export async function audit(
   request: FastifyRequest,

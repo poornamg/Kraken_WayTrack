@@ -2,9 +2,9 @@ import { timingSafeEqual } from "node:crypto"
 import { v2 as cloudinary } from "cloudinary"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { requireRole } from "../middleware/auth.js"
-import { AppError, badRequest, forbidden, notFound } from "../middleware/errors.js"
-import { ok } from "../utils/response.js"
+import { requireRole } from "../common/middleware/auth.js"
+import { AppError, badRequest, forbidden, notFound } from "../common/errors/index.js"
+import { ok } from "../common/utils/response.js"
 import { FileAsset } from "../models/index.js"
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
