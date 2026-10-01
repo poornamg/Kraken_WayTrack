@@ -1,4 +1,4 @@
-import { UnifiedOrder } from "../models/unifiedOrder.js"
+import { UnifiedOrder } from "../../models/unifiedOrder.js"
 
 const initialOrders = [
   { storeId: "store-1", storeName: "Matara City Mart", town: "Matara", type: "Fresh", itemsSummary: "8 crates", kg: 320, emergency: true, inReach: true, suggested: true, stop: 5, dueDay: 27, status: "Not scheduled", items: [] },

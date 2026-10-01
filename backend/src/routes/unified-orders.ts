@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { UnifiedOrder } from "../../database/models/unifiedOrder.js"
-import { ok } from "../../common/response.js"
-import { badRequest, notFound } from "../../common/errors.js"
+import { UnifiedOrder } from "../models/unifiedOrder.js"
+import { ok } from "../utils/response.js"
+import { badRequest, notFound } from "../middleware/errors.js"
 
 export async function unifiedOrderRoutes(app: FastifyInstance) {
   // SSE or Polling endpoint. Dispatcher can just poll GET /api/v1/unified/orders

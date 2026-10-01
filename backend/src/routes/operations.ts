@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { requireRole } from "../../common/auth.js"
-import { audit } from "../../common/audit.js"
-import { badRequest, conflict, notFound } from "../../common/errors.js"
-import { pagination, paginationSchema } from "../../common/pagination.js"
-import { ok, page } from "../../common/response.js"
-import { expectedVersion } from "../../common/version.js"
-import { DeliveryRecord, OperationalEvent, Order, Trip, TripLocation, User } from "../../database/models/index.js"
+import { requireRole } from "../middleware/auth.js"
+import { audit } from "../utils/audit.js"
+import { badRequest, conflict, notFound } from "../middleware/errors.js"
+import { pagination, paginationSchema } from "../utils/pagination.js"
+import { ok, page } from "../utils/response.js"
+import { expectedVersion } from "../utils/version.js"
+import { DeliveryRecord, OperationalEvent, Order, Trip, TripLocation, User } from "../models/index.js"
 
 async function storeOutlet(userId: string) {
   const user = await User.findById(userId).lean()

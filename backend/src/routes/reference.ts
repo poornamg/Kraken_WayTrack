@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify"
 import { DateTime } from "luxon"
 import { z } from "zod"
-import { requireRole } from "../../common/auth.js"
-import { badRequest, notFound } from "../../common/errors.js"
-import { pagination, paginationSchema } from "../../common/pagination.js"
-import { ok, page } from "../../common/response.js"
-import { cutoffContext, OPERATING_ZONE, parseServiceDate } from "../../common/time.js"
-import { CalendarDay, Outlet, Product, Trip, User, Vehicle } from "../../database/models/index.js"
+import { requireRole } from "../middleware/auth.js"
+import { badRequest, notFound } from "../middleware/errors.js"
+import { pagination, paginationSchema } from "../utils/pagination.js"
+import { ok, page } from "../utils/response.js"
+import { cutoffContext, OPERATING_ZONE, parseServiceDate } from "../utils/time.js"
+import { CalendarDay, Outlet, Product, Trip, User, Vehicle } from "../models/index.js"
 
 const clean = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 

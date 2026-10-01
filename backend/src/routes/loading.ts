@@ -1,12 +1,12 @@
 import mongoose from "mongoose"
 import type { FastifyInstance, FastifyRequest } from "fastify"
 import { z } from "zod"
-import { requireRole } from "../../common/auth.js"
-import { audit } from "../../common/audit.js"
-import { badRequest, conflict, notFound, unprocessable } from "../../common/errors.js"
-import { ok } from "../../common/response.js"
-import { expectedVersion } from "../../common/version.js"
-import { LoadRecord, Trip, User } from "../../database/models/index.js"
+import { requireRole } from "../middleware/auth.js"
+import { audit } from "../utils/audit.js"
+import { badRequest, conflict, notFound, unprocessable } from "../middleware/errors.js"
+import { ok } from "../utils/response.js"
+import { expectedVersion } from "../utils/version.js"
+import { LoadRecord, Trip, User } from "../models/index.js"
 
 async function loaderScope(request: FastifyRequest) {
   const auth = requireRole(request, "loader")

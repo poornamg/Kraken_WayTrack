@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { createApp } from "./app.js"
-import { loadConfig } from "./config/env.js"
+import { createApp } from "../src/app.js"
+import { loadConfig } from "../src/config/env.js"
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = []
 afterEach(async () => { await Promise.all(apps.splice(0).map((app) => app.close())) })

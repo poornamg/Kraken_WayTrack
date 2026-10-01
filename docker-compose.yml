@@ -84,35 +84,35 @@ services:
   login-web:
     build:
       <<: *frontend-build
-      args: { APP_DIR: Login, VITE_API_BASE_URL: http://localhost:3000, VITE_USE_MOCK_AUTH: "false" }
+      args: { APP_DIR: frontend/Login, VITE_API_BASE_URL: http://localhost:3000, VITE_USE_MOCK_AUTH: "false" }
     ports: ["5173:8080"]
     healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"], <<: *frontend-health }
 
   dispatcher-web:
     build:
       <<: *frontend-build
-      args: { APP_DIR: dispatcher, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173, VITE_SERVICE_DATE: "${VITE_SERVICE_DATE:-2026-10-01}" }
+      args: { APP_DIR: frontend/dispatcher, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173, VITE_SERVICE_DATE: "${VITE_SERVICE_DATE:-2026-10-01}" }
     ports: ["5174:8080"]
     healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"], <<: *frontend-health }
 
   loader-web:
     build:
       <<: *frontend-build
-      args: { APP_DIR: loader, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173 }
+      args: { APP_DIR: frontend/loader, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173 }
     ports: ["5175:8080"]
     healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"], <<: *frontend-health }
 
   driver-web:
     build:
       <<: *frontend-build
-      args: { APP_DIR: delivery-driver, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173 }
+      args: { APP_DIR: frontend/delivery-driver, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173 }
     ports: ["5176:8080"]
     healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"], <<: *frontend-health }
 
   store-manager-web:
     build:
       <<: *frontend-build
-      args: { APP_DIR: Store-Manager, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173, VITE_SERVICE_DATE: "${VITE_SERVICE_DATE:-2026-10-01}" }
+      args: { APP_DIR: frontend/Store-Manager, VITE_API_BASE_URL: http://localhost:3000, VITE_LOGIN_ORIGIN: http://localhost:5173, VITE_SERVICE_DATE: "${VITE_SERVICE_DATE:-2026-10-01}" }
     ports: ["5177:8080"]
     healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"], <<: *frontend-health }
 
