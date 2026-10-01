@@ -33,6 +33,7 @@ export type Vehicle = {
 
 export type Order = {
   apiId?: string
+  requestedDate?: string
   id: string
   shop: string
   town: string

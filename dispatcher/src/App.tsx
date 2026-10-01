@@ -29,7 +29,7 @@ import wayTrackLogo from "./assets/waytrack-logo.png"
 import { planningApi, type DriverReference, type TripInput } from "./api/planning"
 import { apiRequest } from "./api/client"
 import { clearSession } from "./auth/session"
-import { CalendarModal } from "./components/CalendarModal"
+import { CalendarModal, LiveCalendarModal } from "./components/CalendarModal"
 import { CheckModal } from "./components/CheckModal"
 import { DeferModal } from "./components/DeferModal"
 import { DriverHoverCard } from "./components/DriverHoverCard"
@@ -702,6 +702,7 @@ function LivePlanningHome({
   serviceDate,
   availableServiceDates,
   orders,
+  calendarOrders,
   filter,
   setFilter,
   onDateChange,
@@ -713,6 +714,7 @@ function LivePlanningHome({
   serviceDate: string
   availableServiceDates: string[]
   orders: Order[]
+  calendarOrders: Order[]
   filter: ShopType | null
   setFilter: React.Dispatch<React.SetStateAction<ShopType | null>>
   onDateChange: (date: string) => void
@@ -721,9 +723,11 @@ function LivePlanningHome({
   error: string
   navigate: (path: string) => void
 }) {
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const visibleOrders = filter ? orders.filter((order) => order.type === filter) : orders
   const dateLabel = serviceDate ? new Intl.DateTimeFormat("en", { dateStyle: "full", timeZone: "Asia/Colombo" }).format(new Date(`${serviceDate}T00:00:00+05:30`)) : "No open planning date"
   const brandCount = (brand: ShopType) => orders.filter((order) => order.type === brand).length
+  const selectedDate = serviceDate ? new Date(`${serviceDate}T00:00:00+05:30`) : null
 
   return (
     <section className="page page-enter">
@@ -743,6 +747,28 @@ function LivePlanningHome({
         </div>
       </div>
       {error ? <div className="toast" role="alert"><AlertCircle aria-hidden="true" size={19} />{error}</div> : null}
+      <div className="day-planner-card" style={{ marginBottom: 20 }}>
+        <div className="day-planner-card__top">
+          <span className="day-planner-date">
+            <small>{selectedDate?.toLocaleDateString("en", { weekday: "short", timeZone: "Asia/Colombo" }) ?? "—"}</small>
+            <strong>{selectedDate?.getDate() ?? "—"}</strong>
+            <b>{selectedDate?.toLocaleDateString("en", { month: "short", timeZone: "Asia/Colombo" }) ?? ""}</b>
+          </span>
+          <span className="day-planner-clock"><strong>{orders.length}</strong><span><i /> orders awaiting scheduling</span></span>
+          <UnstyledButton onClick={() => setCalendarOpen(true)}>Open calendar →</UnstyledButton>
+        </div>
+        <div className="day-planner-stats">
+          <div className="day-stat day-stat--due"><strong>{visibleOrders.length}</strong><b>Due on selected date</b><span>{filter ? `Waypoint ${filter}` : "All shop types"}</span></div>
+          <div className="day-stat"><strong>{availableServiceDates.length}</strong><b>Planning dates with orders</b><span>Choose a marked date in the calendar</span></div>
+        </div>
+        <div className="week-strip">
+          {availableServiceDates.slice(0, 7).map((date) => {
+            const value = new Date(`${date}T00:00:00+05:30`)
+            const count = calendarOrders.filter((order) => order.requestedDate === date && (!filter || order.type === filter)).length
+            return <UnstyledButton className={date === serviceDate ? "week-day week-day--active" : "week-day"} key={date} onClick={() => onDateChange(date)}><span>{value.toLocaleDateString("en", { weekday: "short", timeZone: "Asia/Colombo" })}</span><strong>{value.getDate()}</strong>{count ? <b>{count}</b> : null}</UnstyledButton>
+          })}
+        </div>
+      </div>
       <div className="workspace-card" style={{ padding: 24 }}>
         <div className="section-heading">
           <div><Heading>Orders awaiting scheduling</Heading><span>{dateLabel}</span></div>
@@ -764,6 +790,15 @@ function LivePlanningHome({
           <div className="calendar-empty"><CheckCircle2 aria-hidden="true" size={32} /><strong>No orders are waiting for this planning date</strong><span>New Store Manager submissions will appear here automatically.</span></div>
         )}
       </div>
+      {calendarOpen && serviceDate ? (
+        <LiveCalendarModal
+          initialDate={serviceDate}
+          onClose={() => setCalendarOpen(false)}
+          onOpenDate={(date) => { onDateChange(date); setCalendarOpen(false) }}
+          onScheduleDate={(date) => { onDateChange(date); setCalendarOpen(false); navigate("/schedule") }}
+          orders={calendarOrders}
+        />
+      ) : null}
     </section>
   )
 }
@@ -2504,6 +2539,7 @@ export default function App() {
   const [distanceKm, setDistanceKm] = useState("")
   const [durationMinutes, setDurationMinutes] = useState("")
   const [orders, setOrders] = useState<Order[]>(prototypeMode ? initialOrders : [])
+  const [allPlanningOrders, setAllPlanningOrders] = useState<Order[]>(prototypeMode ? initialOrders : [])
   const [routes, setRoutes] = useState<RouteRecord[]>(prototypeMode ? initialRoutes : [])
   const [remarks, setRemarks] = useState<Remark[]>(initialRemarks)
 
@@ -2518,28 +2554,32 @@ export default function App() {
       const planningDate = serviceDate && dates.includes(serviceDate) ? serviceDate : configuredDate && dates.includes(configuredDate) ? configuredDate : dates[0]
       if (!planningDate) {
         setOrders([])
+        setAllPlanningOrders([])
         setVehicles([])
         setDrivers([])
         setPlanningError("")
         return
       }
       if (planningDate !== serviceDate) setServiceDate(planningDate)
-      const apiOrders = allOrders.filter((order) => order.requestedDate === planningDate)
-        const [apiVehicles, apiDrivers] = await Promise.all([planningApi.vehicles(planningDate), planningApi.drivers()])
-        setOrders(apiOrders.map((order) => ({
-          apiId: order._id,
-          id: order.orderNumber,
-          shop: order.outlet?.displayName ?? order.outletId,
-          town: order.outlet?.district ?? order.outletId,
-          type: order.brand,
-          items: `${order.items.reduce((sum, item) => sum + item.quantity, 0)} units`,
-          kg: order.totalWeightKg,
-          emergency: false,
-          inReach: true,
-          suggested: false,
-          dueDay: Number(order.requestedDate.slice(8, 10)),
-        })))
-        setVehicles(apiVehicles.map((vehicle) => ({
+      const mappedOrders = allOrders.map((order) => ({
+        apiId: order._id,
+        id: order.orderNumber,
+        shop: order.outlet?.displayName ?? order.outletId,
+        town: order.outlet?.district ?? order.outletId,
+        type: order.brand,
+        items: `${order.items.reduce((sum, item) => sum + item.quantity, 0)} units`,
+        kg: order.totalWeightKg,
+        emergency: false,
+        inReach: true,
+        suggested: false,
+        dueDay: Number(order.requestedDate.slice(8, 10)),
+        requestedDate: order.requestedDate,
+      }))
+      setAllPlanningOrders(mappedOrders)
+      const apiOrders = mappedOrders.filter((order) => order.requestedDate === planningDate)
+      const [apiVehicles, apiDrivers] = await Promise.all([planningApi.vehicles(planningDate), planningApi.drivers()])
+      setOrders(apiOrders)
+      setVehicles(apiVehicles.map((vehicle) => ({
           id: vehicle.vehicleId,
           type: vehicle.temperatureClass === "reefer" ? "Refrigerated" : vehicle.type.toLowerCase() === "van" ? "Van" : "Lorry",
           capacityKg: vehicle.weightCapacityKg,
@@ -2551,9 +2591,9 @@ export default function App() {
           fuel: vehicle.weeklyFuelQuotaL > 0 ? Math.max(0, Math.round((1 - vehicle.usedFuelL / vehicle.weeklyFuelQuotaL) * 100)) : 0,
           volumeM3: vehicle.volumeCapacityM3,
           turnsToday: vehicle.routesToday,
-        })))
-        setDrivers(apiDrivers)
-        if (apiDrivers.length === 1) setSelectedDriverId(apiDrivers[0]._id)
+      })))
+      setDrivers(apiDrivers)
+      if (apiDrivers.length === 1) setSelectedDriverId(apiDrivers[0]._id)
       setPlanningError("")
     } catch (error) {
       setPlanningError(error instanceof Error ? error.message : "Unable to refresh the planning queue.")
@@ -2816,6 +2856,7 @@ export default function App() {
         ) : (
           <LivePlanningHome
             availableServiceDates={availableServiceDates}
+            calendarOrders={allPlanningOrders}
             error={planningError}
             filter={homeFilter}
             navigate={navigate}
