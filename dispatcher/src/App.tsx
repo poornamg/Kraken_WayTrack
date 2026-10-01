@@ -73,6 +73,17 @@ function getInitialPath() {
     : "/home"
 }
 
+function dateInColombo(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Colombo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date)
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${value.year}-${value.month}-${value.day}`
+}
+
 function ProfileMenu({ navigate }: { navigate: (path: string) => void }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -314,32 +325,68 @@ function DayPlannerCard({
   filter,
   onOpenCalendar,
   onSelectDay,
+  onSelectDate,
+  selectedDate,
+  orders,
+  calendarOrders,
+  liveMode = false,
 }: {
   day: number
   filter: ShopType | null
   onOpenCalendar: () => void
   onSelectDay: (day: number) => void
+  onSelectDate?: (date: string) => void
+  selectedDate?: string
+  orders?: Order[]
+  calendarOrders?: Order[]
+  liveMode?: boolean
 }) {
-  const [clock, setClock] = useState(() => new Date(2026, 8, 27, 10, 42))
-  const isToday = day === 27
+  const live = liveMode
+  const [clock, setClock] = useState(() => live ? new Date() : new Date(2026, 8, 27, 10, 42))
+  const selected = selectedDate ? new Date(`${selectedDate}T12:00:00Z`) : null
+  const todayIso = dateInColombo()
+  const isToday = live ? selectedDate === todayIso : day === 27
   const scope = filter ?? "All"
-  const todayDue = scope === "Fresh" ? 2 : scope === "Tech" ? 1 : scope === "Style" ? 2 : 5
+  const visibleOrders = live
+    ? (orders ?? []).filter((order) => !filter || order.type === filter)
+    : []
+  const todayDue = live ? visibleOrders.length : scope === "Fresh" ? 2 : scope === "Tech" ? 1 : scope === "Style" ? 2 : 5
   const todayUnscheduled =
-    scope === "Fresh" || scope === "Style" ? 1 : scope === "Tech" ? 0 : 2
-  const nextDue = scope === "Fresh" ? 3 : scope === "Tech" ? 2 : scope === "Style" ? 2 : 7
-  const week = [
-    { label: "Sun", day: 27, count: 5 },
-    { label: "Mon", day: 28, count: 3 },
-    { label: "Tue", day: 29, count: 0 },
-    { label: "Wed", day: 30, count: 4 },
-    { label: "Thu", day: 1, count: 0 },
-    { label: "Fri", day: 2, count: 3 },
-    { label: "Sat", day: 3, count: 0 },
-  ]
+    live ? visibleOrders.filter((order) => !order.stop).length : scope === "Fresh" || scope === "Style" ? 1 : scope === "Tech" ? 0 : 2
+  const nextDue = live
+    ? (calendarOrders ?? []).filter((order) => {
+        if (!order.requestedDate || !selectedDate || (filter && order.type !== filter)) return false
+        const offset = (new Date(`${order.requestedDate}T12:00:00Z`).getTime() - selected.getTime()) / 86_400_000
+        return offset > 0 && offset <= 3
+      }).length
+    : scope === "Fresh" ? 3 : scope === "Tech" ? 2 : scope === "Style" ? 2 : 7
+  const week = live && selected
+    ? Array.from({ length: 7 }, (_, index) => {
+        const value = new Date(selected)
+        value.setUTCDate(selected.getUTCDate() - selected.getUTCDay() + index)
+        const date = value.toISOString().slice(0, 10)
+        return {
+          date,
+          label: value.toLocaleDateString("en", { weekday: "short", timeZone: "UTC" }),
+          day: value.getUTCDate(),
+          count: (calendarOrders ?? []).filter((order) => order.requestedDate === date && (!filter || order.type === filter)).length,
+        }
+      })
+    : live
+      ? []
+      : [
+        { label: "Sun", day: 27, count: 5 },
+        { label: "Mon", day: 28, count: 3 },
+        { label: "Tue", day: 29, count: 0 },
+        { label: "Wed", day: 30, count: 4 },
+        { label: "Thu", day: 1, count: 0 },
+        { label: "Fri", day: 2, count: 3 },
+        { label: "Sat", day: 3, count: 0 },
+      ]
 
   useEffect(() => {
     const timer = window.setInterval(
-      () => setClock((current) => new Date(current.getTime() + 60_000)),
+      () => setClock(live ? new Date() : (current) => new Date(current.getTime() + 60_000)),
       60_000,
     )
     return () => window.clearInterval(timer)
@@ -349,9 +396,9 @@ function DayPlannerCard({
     <div className="day-planner-card">
       <div className="day-planner-card__top">
         <span className="day-planner-date">
-          <small>{isToday ? "Sun" : "Mon"}</small>
-          <strong>{day}</strong>
-          <b>Sep</b>
+          <small>{selected?.toLocaleDateString("en", { weekday: "short", timeZone: "UTC" }) ?? (live ? "—" : isToday ? "Sun" : "Mon")}</small>
+          <strong>{selected?.getUTCDate() ?? (live ? "—" : day)}</strong>
+          <b>{selected?.toLocaleDateString("en", { month: "short", timeZone: "UTC" }) ?? (live ? "" : "Sep")}</b>
         </span>
         <span className="day-planner-clock">
           <strong>
@@ -361,7 +408,7 @@ function DayPlannerCard({
             })}
           </strong>
           <span>
-            <i /> Live{isToday ? "" : " · today Sun 27"}
+            <i /> Live{isToday ? "" : live ? ` · today ${new Date(`${todayIso}T12:00:00Z`).toLocaleDateString("en", { weekday: "short", day: "numeric", timeZone: "UTC" })}` : " · today Sun 27"}
           </span>
         </span>
         <UnstyledButton onClick={onOpenCalendar}>
@@ -370,24 +417,24 @@ function DayPlannerCard({
       </div>
       <div className="day-planner-stats">
         <div className="day-stat day-stat--due">
-          <strong>{isToday ? todayDue : 3}</strong>
-          <b>{isToday ? "Due today" : "Due Mon 28"}</b>
+          <strong>{live ? todayDue : isToday ? todayDue : 3}</strong>
+          <b>{isToday ? "Due today" : live ? selected ? `Due ${selected.toLocaleDateString("en", { weekday: "short", day: "numeric", timeZone: "UTC" })}` : "Due date" : "Due Mon 28"}</b>
           <span>
-            {isToday ? todayUnscheduled : 2} not scheduled yet
+            {live ? todayUnscheduled : isToday ? todayUnscheduled : 2} not scheduled yet
           </span>
         </div>
         <div className="day-stat">
-          <strong>{isToday ? nextDue : 1}</strong>
-          <b>{isToday ? "Due next 3 days" : "Route scheduled"}</b>
-          <span>{isToday ? "Mon 28 – Wed 30" : "WP PK-7741 · 07:00"}</span>
+          <strong>{live || isToday ? nextDue : 1}</strong>
+          <b>{live || isToday ? "Due next 3 days" : "Route scheduled"}</b>
+          <span>{live ? "After the selected date" : isToday ? "Mon 28 – Wed 30" : "WP PK-7741 · 07:00"}</span>
         </div>
       </div>
       <div className="week-strip">
         {week.map((item) => (
           <UnstyledButton
-            className={item.day === day ? "week-day week-day--active" : "week-day"}
-            key={`${item.label}-${item.day}`}
-            onClick={() => onSelectDay(item.day)}
+            className={("date" in item ? item.date === selectedDate : item.day === day) ? "week-day week-day--active" : "week-day"}
+            key={("date" in item && item.date) || `${item.label}-${item.day}`}
+            onClick={() => live && "date" in item ? onSelectDate?.(item.date) : onSelectDay(item.day)}
           >
             <span>{item.label}</span>
             <strong>{item.day}</strong>
@@ -409,6 +456,12 @@ function HomePage({
   setViewDate,
   routes,
   orders,
+  serviceDate,
+  calendarOrders = [],
+  onDateChange,
+  onRefresh,
+  refreshing = false,
+  error = "",
 }: {
   navigate: (path: string) => void
   toast: string
@@ -419,11 +472,26 @@ function HomePage({
   setViewDate: React.Dispatch<React.SetStateAction<number>>
   routes: RouteRecord[]
   orders: Order[]
+  serviceDate?: string
+  calendarOrders?: Order[]
+  onDateChange?: (date: string) => void
+  onRefresh?: () => void
+  refreshing?: boolean
+  error?: string
 }) {
+  const live = Boolean(onDateChange)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [calendarDay, setCalendarDay] = useState(viewDate)
   const [showAllCompleted, setShowAllCompleted] = useState(false)
-  const isToday = viewDate === 27
+  const todayIso = dateInColombo()
+  const isToday = live ? serviceDate === todayIso : viewDate === 27
+  const selectedDate = serviceDate ? new Date(`${serviceDate}T12:00:00Z`) : null
+  const selectedLabel = selectedDate?.toLocaleDateString("en", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  })
 
   const activeToday = routes.filter((item) =>
     ["WP LB-4521", "WP CAB-7810", "WP KD-3301", "SP LC-2290"].includes(item.id),
@@ -448,9 +516,16 @@ function HomePage({
     : futureOrders
 
   const showFutureRoute = !filter || futureRoute.tags.includes(filter)
-  const filterCounts = isToday
+  const filterCounts = live
+    ? {
+        Fresh: orders.filter((order) => order.type === "Fresh").length,
+        Tech: orders.filter((order) => order.type === "Tech").length,
+        Style: orders.filter((order) => order.type === "Style").length,
+      }
+    : isToday
     ? { Fresh: 4, Tech: 2, Style: 3 }
     : { Fresh: 1, Tech: 1, Style: 0 }
+  const shownLiveOrders = filter ? orders.filter((order) => order.type === filter) : orders
 
   return (
     <section className="page page-enter">
@@ -458,12 +533,14 @@ function HomePage({
         <div className="home-title-row">
           <PageTitle>Dispatcher home</PageTitle>
           <span className={isToday ? "plan-pill" : "plan-pill plan-pill--future"}>
-            {isToday
+            {live
+              ? selectedLabel ? `${isToday ? "Today's plan" : "Planning ahead"} · ${selectedLabel}` : "Waiting for planning orders"
+              : isToday
               ? "Today's plan · Sun 27 Sep"
               : "Planning ahead · Mon 28 Sep"}
           </span>
         </div>
-        {!isToday ? (
+        {!isToday && !live ? (
           <Button
             onClick={() => {
               setViewDate(27)
@@ -478,6 +555,13 @@ function HomePage({
         <div className="toast" role="status">
           <CheckCircle2 aria-hidden="true" size={19} />
           {toast}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="toast" role="alert">
+          <AlertCircle aria-hidden="true" size={19} />
+          {error}
+          {onRefresh ? <Button disabled={refreshing} onClick={onRefresh} variant="secondary">{refreshing ? "Refreshing…" : "Try again"}</Button> : null}
         </div>
       ) : null}
       <div className="workspace-card home-workspace">
@@ -506,6 +590,10 @@ function HomePage({
             <DayPlannerCard
               day={viewDate}
               filter={filter}
+              selectedDate={serviceDate}
+              orders={orders}
+              calendarOrders={calendarOrders}
+              liveMode={live}
               onOpenCalendar={() => {
                 setCalendarDay(viewDate)
                 setCalendarOpen(true)
@@ -514,27 +602,27 @@ function HomePage({
                 setCalendarDay(day)
                 setCalendarOpen(true)
               }}
+              onSelectDate={onDateChange}
             />
             <Button
               className="schedule-cta"
               icon={ArrowRight}
-              onClick={() =>
-                navigate(
-                  isToday
-                    ? "/schedule"
-                    : `/schedule?date=2026-09-${viewDate}`,
-                )
-              }
+              disabled={live && shownLiveOrders.length === 0}
+              onClick={() => navigate(live ? "/schedule" : isToday ? "/schedule" : `/schedule?date=2026-09-${viewDate}`)}
               variant="primary"
             >
               <span className="schedule-cta__copy">
                 <strong>
-                  {isToday
+                  {live
+                    ? selectedLabel ? `Schedule orders for ${selectedLabel}` : "Schedule orders"
+                    : isToday
                     ? "Schedule orders"
                     : `Schedule orders for Mon ${viewDate}`}
                 </strong>
                 <small>
-                  {isToday
+                  {live
+                    ? `${shownLiveOrders.filter((order) => !order.stop).length} order${shownLiveOrders.filter((order) => !order.stop).length === 1 ? "" : "s"} due, not scheduled`
+                    : isToday
                     ? `${filter === "Fresh" ? 1 : 2} order${filter === "Fresh" ? "" : "s"} due today not scheduled`
                     : "2 orders due that day not scheduled"}
                 </small>
@@ -542,7 +630,43 @@ function HomePage({
             </Button>
           </aside>
           <section className="day-routes-column">
-            {isToday ? (
+            {live ? (
+              <>
+                <div className="section-heading">
+                  <Heading>{selectedLabel ? `Due ${selectedLabel}, not scheduled` : "Orders awaiting scheduling"}</Heading>
+                  <span>{filter ? `Waypoint ${filter}` : "All shop types"} · {shownLiveOrders.length} orders</span>
+                  {filter ? (
+                    <UnstyledButton className="clear-filter" onClick={() => setFilter(null)}>
+                      Clear filter <X aria-hidden="true" size={16} />
+                    </UnstyledButton>
+                  ) : null}
+                </div>
+                {shownLiveOrders.length ? (
+                  <div className="future-order-list">
+                    {shownLiveOrders.map((order) => (
+                      <UnstyledButton
+                        className="future-order-row"
+                        key={order.apiId ?? order.id}
+                        onClick={() => navigate(`/schedule?order=${encodeURIComponent(order.id)}`)}
+                      >
+                        <span>
+                          <span className="data-text">{order.id}</span>
+                          <ShopTag type={order.type} />
+                          <small>{order.shop} · {order.town} · {order.items} · {order.kg.toLocaleString()} kg</small>
+                        </span>
+                        <b>Not scheduled</b>
+                      </UnstyledButton>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="calendar-empty">
+                    <CheckCircle2 aria-hidden="true" size={32} />
+                    <strong>No orders are waiting for this date</strong>
+                    <span>New Store Manager submissions will appear here automatically.</span>
+                  </div>
+                )}
+              </>
+            ) : isToday ? (
               <>
                 <div className="section-heading">
                   <Heading>Active routes</Heading>
@@ -668,7 +792,24 @@ function HomePage({
           </section>
         </div>
       </div>
-      {calendarOpen ? (
+      {calendarOpen && live ? (
+        serviceDate ? (
+          <LiveCalendarModal
+            initialDate={serviceDate}
+            onClose={() => setCalendarOpen(false)}
+            onOpenDate={(date) => {
+              onDateChange?.(date)
+              setCalendarOpen(false)
+            }}
+            onScheduleDate={(date) => {
+              onDateChange?.(date)
+              setCalendarOpen(false)
+              navigate("/schedule")
+            }}
+            orders={calendarOrders}
+          />
+        ) : null
+      ) : calendarOpen ? (
         <CalendarModal
           initialDay={calendarDay}
           onClose={() => setCalendarOpen(false)}
@@ -2841,33 +2982,23 @@ export default function App() {
           setRemarks={setRemarks}
         />
       ) : (
-        prototypeMode ? (
-          <HomePage
-            approved={approved}
-            filter={homeFilter}
-            navigate={navigate}
-            orders={orders}
-            routes={routes}
-            setFilter={setHomeFilter}
-            setViewDate={setViewDate}
-            toast={toast}
-            viewDate={viewDate}
-          />
-        ) : (
-          <LivePlanningHome
-            availableServiceDates={availableServiceDates}
-            calendarOrders={allPlanningOrders}
-            error={planningError}
-            filter={homeFilter}
-            navigate={navigate}
-            onDateChange={setServiceDate}
-            onRefresh={() => void refreshPlanningData()}
-            orders={orders}
-            refreshing={planningRefreshing}
-            serviceDate={serviceDate}
-            setFilter={setHomeFilter}
-          />
-        )
+        <HomePage
+          approved={approved}
+          calendarOrders={prototypeMode ? undefined : allPlanningOrders}
+          error={prototypeMode ? undefined : planningError}
+          filter={homeFilter}
+          navigate={navigate}
+          onDateChange={prototypeMode ? undefined : setServiceDate}
+          onRefresh={prototypeMode ? undefined : () => void refreshPlanningData()}
+          orders={orders}
+          refreshing={prototypeMode ? undefined : planningRefreshing}
+          routes={routes}
+          serviceDate={prototypeMode ? undefined : serviceDate}
+          setFilter={setHomeFilter}
+          setViewDate={setViewDate}
+          toast={toast}
+          viewDate={viewDate}
+        />
       )}
 
       {/* Global Modals for Defer & Manage Vehicles */}
