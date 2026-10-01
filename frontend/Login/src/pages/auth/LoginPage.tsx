@@ -1,7 +1,7 @@
 import { useState, useRef, type FormEvent } from "react"
 import { AuthLayout } from "./AuthLayout"
 import { authApi } from "@/auth"
-import { PROTOTYPE_USERS } from "@/auth/mockApi"
+import { PROTOTYPE_USERS } from "@/data/mockUsers"
 
 const isMock = import.meta.env.VITE_USE_MOCK_AUTH === "true"
 
