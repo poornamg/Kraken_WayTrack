@@ -11,14 +11,14 @@ import { AppError } from "./common/errors/index.js"
 import { ok } from "./common/utils/response.js"
 import { databaseReady } from "./config/connection.js"
 import { CalendarDay, Outlet, Product, Vehicle } from "./models/index.js"
-import { authRoutes } from "./routes/auth.js"
+import { authRoutes } from "./modules/auth/routes.js"
 import { referenceRoutes } from "./modules/reference/routes.js"
-import { orderRoutes } from "./routes/orders.js"
-import { planningRoutes } from "./routes/planning.js"
-import { loadingRoutes } from "./routes/loading.js"
-import { driverRoutes } from "./routes/driver.js"
-import { operationRoutes } from "./routes/operations.js"
-import { fileRoutes } from "./routes/files.js"
+import { orderRoutes } from "./modules/orders/routes.js"
+import { planningRoutes } from "./modules/planning/routes.js"
+import { loadingRoutes } from "./modules/loading/routes.js"
+import { driverRoutes } from "./modules/driver/routes.js"
+import { operationRoutes } from "./modules/operations/routes.js"
+import { fileRoutes } from "./modules/files/routes.js"
 
 export async function createApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -99,7 +99,7 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
     await api.register(driverRoutes)
     await api.register(operationRoutes)
     await api.register(fileRoutes)
-    await api.register((await import("./routes/unified-orders.js")).unifiedOrderRoutes)
+    await api.register((await import("./modules/unified-orders/routes.js")).unifiedOrderRoutes)
   }, { prefix: "/api/v1" })
 
   app.get("/docs/openapi.json", async (_request, reply) => reply.send(app.swagger()))

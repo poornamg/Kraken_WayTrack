@@ -2,15 +2,15 @@ import { randomBytes } from "node:crypto"
 import mongoose from "mongoose"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
-import { requireRole } from "../common/middleware/auth.js"
-import { audit } from "../common/utils/audit.js"
-import { badRequest, conflict, notFound, unprocessable } from "../common/errors/index.js"
-import { pagination, paginationSchema } from "../common/utils/pagination.js"
-import { ok, page } from "../common/utils/response.js"
-import { parseServiceDate } from "../common/utils/time.js"
-import { expectedVersion } from "../common/utils/version.js"
-import { LoadRecord, Order, Outlet, Trip, User, Vehicle } from "../models/index.js"
-import { validateTrip } from "../services/planningConstraints.js"
+import { requireRole } from "../../common/middleware/auth.js"
+import { audit } from "../../common/utils/audit.js"
+import { badRequest, conflict, notFound, unprocessable } from "../../common/errors/index.js"
+import { pagination, paginationSchema } from "../../common/utils/pagination.js"
+import { ok, page } from "../../common/utils/response.js"
+import { parseServiceDate } from "../../common/utils/time.js"
+import { expectedVersion } from "../../common/utils/version.js"
+import { LoadRecord, Order, Outlet, Trip, User, Vehicle } from "../../models/index.js"
+import { validateTrip } from "../../services/planningConstraints.js"
 
 const tripBody = z.object({
   serviceDate: z.string(), departureAt: z.coerce.date(), plannedEndAt: z.coerce.date(), vehicleId: z.string().min(1), driverId: z.string().min(1),
@@ -203,8 +203,8 @@ export async function planningRoutes(app: FastifyInstance) {
     if (!driver) throw unprocessable("DRIVER_UNAVAILABLE", "The selected Driver is unavailable.")
     if (!vehicle) throw unprocessable("VEHICLE_UNAVAILABLE", "The selected vehicle is unavailable.")
 
-    const { UnifiedOrder } = require("../models/unifiedOrder.js");
-    const { DeliveryRecord } = require("../models/index.js");
+    const { UnifiedOrder } = require("../../models/unifiedOrder.js");
+    const { DeliveryRecord } = require("../../models/index.js");
     const argon2 = require("argon2");
     
     const existingTrip = await Trip.findOne({ 
