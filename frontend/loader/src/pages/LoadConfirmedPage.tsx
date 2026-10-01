@@ -14,18 +14,29 @@ import {
 } from "lucide-react"
 import { jsPDF } from "jspdf"
 import { useEffect, useRef, useState } from "react"
-import {
-  BottomActionBar,
-  Button,
-  Card,
-  LoaderShell,
-  PageHeader,
-  StatusPill,
-  Text,
-  LoadDepartureTimer,
-} from "../components/loader-ui"
+
 import type { ActiveStop, LoadCase } from "../data/mock-data"
 import { useConnectivity } from "../hooks/useConnectivity"
+
+import { Text } from "../components/ui/Text.js";
+import { WayLinkMark } from "../components/ui/WayLinkMark.js";
+import { Button } from "../components/ui/Button.js";
+import { StatusPill } from "../components/ui/StatusPill.js";
+import { ConnectivityIndicator } from "../components/ui/ConnectivityIndicator.js";
+import { LoaderIdentity } from "../components/ui/LoaderIdentity.js";
+import { Card } from "../components/ui/Card.js";
+import { CompletionVarianceBadge } from "../components/available-work/CompletionVarianceBadge.js";
+import { LoadDepartureTimer } from "../components/available-work/LoadDepartureTimer.js";
+import { WorkCard } from "../components/available-work/WorkCard.js";
+import { LoadItem } from "../components/active-load/LoadItem.js";
+import { StopCard } from "../components/active-load/StopCard.js";
+import { ExceptionSheet } from "../components/active-load/ExceptionSheet.js";
+import { Progress } from "../components/active-load/Progress.js";
+import { PageHeader } from "../components/layout/PageHeader.js";
+import { SectionHeader } from "../components/layout/SectionHeader.js";
+import { BottomActionBar } from "../components/layout/BottomActionBar.js";
+import { LoaderShell } from "../components/layout/LoaderShell.js";
+import type { ExceptionType, LoadItemData, LoadItemException } from "../components/active-load/LoadItem.js";
 
 // ── Constants (vehicle metadata is prototype-static) ─────────────────────────
 
