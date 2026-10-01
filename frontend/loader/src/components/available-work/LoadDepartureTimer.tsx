@@ -8,32 +8,20 @@ import { createElement, useEffect, useRef, useState, type ButtonHTMLAttributes, 
 import { cx } from "../../utils/cx.js";
 import { Text } from "../ui/Text.js";
 import type { LoadTiming } from "../../data/mock-data.js";
+import { useDepartureCountdown } from "../../hooks/useDepartureCountdown.js";
+
 
 export function LoadDepartureTimer({ timing }: { timing: LoadTiming }) {
-  const [now, setNow] = useState(Date.now())
+  const { completed, finalVariance, isPast, formatted } = useDepartureCountdown(timing)
 
-  useEffect(() => {
-    if (timing.finalVariance !== undefined) return
-
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [timing.finalVariance])
-
-  if (timing.finalVariance !== undefined) {
+  if (completed) {
     return (
       <div className="load-departure-timer load-departure-timer--completed">
         <Text variant="caption">COMPLETED</Text>
-        <CompletionVarianceBadge finalVariance={timing.finalVariance} />
+        <CompletionVarianceBadge finalVariance={finalVariance!} />
       </div>
     )
   }
-
-  const diff = timing.departureAt - now
-  const isPast = diff < 0
-  const absDiff = Math.abs(diff)
-  const m = Math.floor(absDiff / 60000)
-  const s = Math.floor((absDiff % 60000) / 1000)
-  const formatted = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
 
   return (
     <div className="load-departure-timer">

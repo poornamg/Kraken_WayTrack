@@ -13,6 +13,7 @@ import {
 import { useEffect } from "react"
 
 import type { ActiveStop, LoadCase } from "../data/mock-data"
+import { useReconciliation } from "../hooks/useReconciliation.js";
 import { useConnectivity } from "../hooks/useConnectivity"
 
 import { Text } from "../components/ui/Text.js";
@@ -67,37 +68,19 @@ export default function ReconciliationPage({
 
   // ── Derived accounting totals ─────────────────────────────────────────────
 
-  const allItems = stops.flatMap((stop) => stop.items)
-  const total = allItems.length
-  const loadedCount = allItems.filter((i) => i.status === "loaded").length
-  const flaggedCount = allItems.filter((i) => i.status === "flagged").length
-  const pendingCount = allItems.filter((i) => i.status === "pending").length
-  const accountedCount = loadedCount + flaggedCount
-
-  // Invariant: Loaded + Flagged + Pending = Total
-  // For the current prototype: 19 + 4 + 0 = 23 ✓
-  const canConfirm = pendingCount === 0
-
-  // ── Exception items (all flagged items across all stops) ──────────────────
-
-  const flaggedItems = stops.flatMap((stop) =>
-    stop.items
-      .filter((item) => item.status === "flagged")
-      .map((item) => ({ item, stop })),
-  )
-
-  // ── Stop accounting status ────────────────────────────────────────────────
-
-  const stopSummaries = stops.map((stop) => {
-    const pending = stop.items.filter((i) => i.status === "pending").length
-    const flagged = stop.items.filter((i) => i.status === "flagged").length
-    const loaded = stop.items.filter((i) => i.status === "loaded").length
-    const isComplete = pending === 0
-    return { stop, isComplete, loaded, flagged, pending }
-  })
+  const {
+    total,
+    loadedCount,
+    flaggedCount,
+    pendingCount,
+    accountedCount,
+    canConfirm,
+    flaggedItems,
+    stopSummaries
+  } = useReconciliation(stops)
 
   // ── Connectivity detail label ─────────────────────────────────────────────
-
+  
   const connectivityDetail = {
     online: "Synced 04:12",
     offline: "Changes saved on device",

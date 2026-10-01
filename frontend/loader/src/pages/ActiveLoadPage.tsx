@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react"
 
 import type { ActiveStop, LoadCase } from "../data/mock-data"
+import { useLoadProgress } from "../hooks/useLoadProgress.js";
 import { useConnectivity } from "../hooks/useConnectivity"
 
 import { Text } from "../components/ui/Text.js";
@@ -77,163 +78,16 @@ export default function ActiveLoadPage({
   onSaveException,
 }: ActiveLoadPageProps) {
   const [connectivity] = useConnectivity(forcedConnectivity)
-  const [visibleStopIndex, setVisibleStopIndex] = useState(0)
-  const [exceptionItemId, setExceptionItemId] = useState<string | null>(null)
-  const [savedNotice, setSavedNotice] = useState<{
-    detail: string
-    pendingSync: boolean
-  } | null>(null)
-  const [reconciliationReady, setReconciliationReady] = useState(false)
-
-  // Slide animation state: "none" | "slide-left" | "slide-right"
-  const [slideDirection, setSlideDirection] = useState<
-    "none" | "slide-left" | "slide-right"
-  >("none")
-  const slideTimerRef = useRef<number | null>(null)
-
-  // ── Derived state ────────────────────────────────────────────────────────
-
-  const allItems = stops.flatMap((stop) => stop.items)
-  const loadedCount = allItems.filter((item) => item.status === "loaded").length
-  const flaggedCount = allItems.filter(
-    (item) => item.status === "flagged",
-  ).length
-  const pendingCount = allItems.filter((item) => item.status === "pending").length
-  const accountedCount = loadedCount + flaggedCount
-  const allItemsAccounted = accountedCount === allItems.length
-
-  // TRUE as soon as every item across all stops is accounted — derived purely
-  // from accounting state, NOT from visibleStopIndex position.
-  const globallyComplete = pendingCount === 0
-
-  // The first stop (in loading order = array order 0…N) that still has at
-  // least one pending item. -1 means all stops are complete.
-  const nextRequiredStopIndex = stops.findIndex((stop) =>
-    stop.items.some((item) => item.status === "pending"),
-  )
-
-  useEffect(() => {
-    if (
-      globallyComplete &&
-      activeLoad &&
-      activeLoad.timing.finalVariance === undefined &&
-      onLoadCompleted
-    ) {
-      onLoadCompleted(Date.now())
-    }
-  }, [globallyComplete, activeLoad, onLoadCompleted])
-
-  const visibleStop = stops[visibleStopIndex]
-  const visiblePending =
-    visibleStop?.items.filter((item) => item.status === "pending").length ?? 0
-
-  const exceptionItem =
-    allItems.find((item) => item.id === exceptionItemId) ?? null
-
-  // ── Per-stop completion helper ──────────────────────────────────────────
-
-  function isStopComplete(stopIndex: number) {
-    return stops[stopIndex].items.every((item) => item.status !== "pending")
-  }
-
-  // ── Auto-advance on stop completion ────────────────────────────────────
-
-  const prevNextRequired = useRef(nextRequiredStopIndex)
-
-  useEffect(() => {
-    // When the next required stop changes and moves forward (i.e. the current
-    // visible stop just became complete), auto-advance with a slide animation.
-    const prev = prevNextRequired.current
-    prevNextRequired.current = nextRequiredStopIndex
-
-    // Only auto-advance if:
-    // 1. The visible stop just became complete (its index matches the previous nextRequired)
-    // 2. There IS a new next required stop to go to
-    // 3. The visible stop IS the one that just completed (user hasn't manually navigated away)
-    if (
-      prev !== -1 &&
-      prev === visibleStopIndex &&
-      nextRequiredStopIndex !== -1 &&
-      nextRequiredStopIndex !== prev &&
-      isStopComplete(prev)
-    ) {
-      triggerSlide(nextRequiredStopIndex, "slide-left")
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextRequiredStopIndex, visibleStopIndex])
-
-  // ── Slide animation helper ─────────────────────────────────────────────
-
-  function triggerSlide(
-    targetIndex: number,
-    direction: "slide-left" | "slide-right",
-  ) {
-    if (slideTimerRef.current) {
-      window.clearTimeout(slideTimerRef.current)
-    }
-    setSlideDirection(direction)
-    slideTimerRef.current = window.setTimeout(() => {
-      setVisibleStopIndex(targetIndex)
-      setSlideDirection("none")
-      slideTimerRef.current = null
-    }, 280)
-  }
-
-  // ── Item mutation helpers ─────────────────────────────────────────────────
-
-  function updateItems(
-    updater: (item: LoadItemData) => LoadItemData,
-  ) {
-    onStopsChange(
-      stops.map((stop) => ({
-        ...stop,
-        items: stop.items.map(updater),
-      })),
-    )
-  }
-
-  async function markItemLoaded(itemId: string) {
-    const current = allItems.find((item) => item.id === itemId)
-    if (current && onMarkItemLoaded) await onMarkItemLoaded(current)
-    updateItems((item) =>
-      item.id === itemId
-        ? { ...item, exception: undefined, status: "loaded" }
-        : item,
-    )
-  }
-
-  async function saveException(exception: LoadItemException) {
-    if (!exceptionItemId) return
-
-    const current = allItems.find((item) => item.id === exceptionItemId)
-    if (current && onSaveException) await onSaveException(current, exception)
-
-    updateItems((item) =>
-      item.id === exceptionItemId
-        ? { ...item, exception, status: "flagged" }
-        : item,
-    )
-
-    setExceptionItemId(null)
-
-    const affectedUnit =
-      exception.affectedQuantity === 1
-        ? exception.unit.replace(/s$/, "")
-        : exception.unit
-
-    setSavedNotice({
-      detail: `${exception.affectedQuantity} ${affectedUnit} ${exception.type} · ${
-        exception.pendingSync
-          ? "Dispatcher notified when synced"
-          : "Dispatcher notified"
-      }`,
-      pendingSync: exception.pendingSync,
-    })
-
-    window.setTimeout(() => setSavedNotice(null), 3600)
-  }
-
-  // ── Navigation ───────────────────────────────────────────────────────────
+  const {
+    visibleStopIndex,
+    exceptionItemId, setExceptionItemId,
+    savedNotice,
+    reconciliationReady, setReconciliationReady,
+    slideDirection,
+    accountedCount, allItemsAccounted, globallyComplete,
+    visibleStop, visiblePending, exceptionItem,
+    isStopComplete, markItemLoaded, saveException, handlePrevStop, handleNextStop
+  } = useLoadProgress({ stops, onStopsChange, activeLoad, onLoadCompleted, onMarkItemLoaded, onSaveException })
 
   function handleContinue() {
     const currentStopComplete = isStopComplete(visibleStopIndex)
@@ -253,19 +107,6 @@ export default function ActiveLoadPage({
 
   function handleLoadingAccounted() {
     onLoadingAccounted()
-  }
-
-  // Manual stop navigation
-  function handlePrevStop() {
-    if (visibleStopIndex > 0) {
-      triggerSlide(visibleStopIndex - 1, "slide-right")
-    }
-  }
-
-  function handleNextStop() {
-    if (visibleStopIndex < stops.length - 1) {
-      triggerSlide(visibleStopIndex + 1, "slide-left")
-    }
   }
 
   // ── Connectivity detail label ─────────────────────────────────────────────

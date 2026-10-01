@@ -6,7 +6,6 @@ import AvailableWorkPage from "./pages/AvailableWorkPage"
 import LoadConfirmedPage from "./pages/LoadConfirmedPage"
 import ReconciliationPage from "./pages/ReconciliationPage"
 import { loadApi, type LoadRecord } from "./services/loads"
-import type { LoadItemData, LoadItemException } from "./components/loader-ui"
 
 import { Text } from "./components/ui/Text.js";
 import { WayLinkMark } from "./components/ui/WayLinkMark.js";
