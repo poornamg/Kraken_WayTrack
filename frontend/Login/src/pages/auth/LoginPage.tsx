@@ -1,3 +1,5 @@
+import { ErrorBanner } from "../../components/ui/ErrorBanner.js"
+import { PasswordField } from "../../components/ui/PasswordField.js"
 import { IdIcon, LockIcon, EyeIcon, EyeOffIcon, AlertIcon } from "../../components/ui/Icons.js"
 import { useAuthForm } from "../../hooks/useAuthForm.js"
 import { AuthLayout } from "./AuthLayout"
@@ -79,49 +81,10 @@ export function LoginPage({ navigate }: LoginPageProps) {
         </div>
 
         {/* Password */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-medium" style={{ color: "#374151" }} htmlFor="password">
-              Password
-            </label>
-          </div>
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-              <LockIcon />
-            </span>
-            <input
-              id="password"
-              type={showPw ? "text" : "password"}
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-12 pl-10 pr-12 rounded-lg text-sm outline-none transition-all"
-              style={{ border: "1.5px solid #d9dde8" }}
-              onFocus={(e) => { e.target.style.borderColor = "#14549c"; e.target.style.boxShadow = "0 0 0 3px rgb(20 84 156 / 15%)" }}
-              onBlur={(e) => { e.target.style.borderColor = "#d9dde8"; e.target.style.boxShadow = "none" }}
-            />
-            <button
-              type="button"
-              aria-label={showPw ? "Hide password" : "Show password"}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              onClick={() => setShowPw((v) => !v)}
-            >
-              {showPw ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-        </div>
+        <PasswordField value={password} onChange={setPassword} showPw={showPw} onToggleShow={() => setShowPw(v => !v)} />
 
         {/* Error */}
-        {error && (
-          <div
-            role="alert"
-            className="flex items-center gap-2 text-sm mb-4 px-3 py-2.5 rounded-lg"
-            style={{ color: "#e5484d", backgroundColor: "#fff0f0", border: "1px solid #fecdd3" }}
-          >
-            <AlertIcon />
-            <span>{error}</span>
-          </div>
-        )}
+        <ErrorBanner error={error} />
 
         <button
           type="submit"
