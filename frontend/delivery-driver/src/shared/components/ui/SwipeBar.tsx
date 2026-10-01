@@ -1,6 +1,7 @@
 // src/shared/components/ui/SwipeBar.tsx - Interactive drag swipe bar with activation animation and 85% threshold
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
+import { useSwipe } from '@/hooks/useSwipe';
 
 export interface SwipeBarProps {
   onComplete: () => void;
@@ -28,63 +29,22 @@ export const SwipeBar: React.FC<SwipeBarProps> = ({
     ? readyText || (isInProgress ? `Swipe to resume Route ${selectedRouteNumber}` : `Swipe to start Route ${selectedRouteNumber}`)
     : placeholderText;
 
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [dragProgress, setDragProgress] = useState(0); // 0 to 1
-  const [isDragging, setIsDragging] = useState(false);
-  const [isNudging, setIsNudging] = useState(false);
-  const prevRouteRef = useRef<number | undefined>(selectedRouteNumber);
-
-  // Trigger one soft ring pulse and 14px nudge on route activation
-  useEffect(() => {
-    if (selectedRouteNumber && selectedRouteNumber !== prevRouteRef.current) {
-      setIsNudging(true);
-      const timer = setTimeout(() => setIsNudging(false), 400);
-      prevRouteRef.current = selectedRouteNumber;
-      return () => clearTimeout(timer);
-    }
-    prevRouteRef.current = selectedRouteNumber;
-  }, [selectedRouteNumber]);
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!isReady) return;
-    setIsDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || !trackRef.current) return;
-    const rect = trackRef.current.getBoundingClientRect();
-    const knobWidth = 48;
-    const maxDrag = rect.width - knobWidth - 8;
-    const currentX = e.clientX - rect.left - 24;
-    const progress = Math.max(0, Math.min(1, currentX / maxDrag));
-    setDragProgress(progress);
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isDragging || !trackRef.current) return;
-    setIsDragging(false);
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {}
-
-    if (dragProgress >= 0.85) {
-      // Completed: animate to 100% in 150ms, then trigger onComplete
-      setDragProgress(1);
-      if (onTrackCompletion) onTrackCompletion();
-      setTimeout(() => {
-        onComplete();
-        setDragProgress(0);
-      }, 150);
-    } else {
-      // Spring back
-      setDragProgress(0);
-    }
-  };
-
-  const knobOffsetPx = trackRef.current
-    ? dragProgress * (trackRef.current.clientWidth - 56)
-    : dragProgress * 300;
+  const {
+    trackRef,
+    dragProgress,
+    isDragging,
+    isNudging,
+    knobOffsetPx,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp
+  } = useSwipe({
+    isReady,
+    selectedRouteNumber,
+    threshold: 0.85,
+    onComplete,
+    onTrackCompletion
+  });
 
   return (
     <div className="w-full px-4 select-none">
