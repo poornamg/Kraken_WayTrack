@@ -45,3 +45,38 @@ Most route files (e.g., `planning.ts`, `driver.ts`, `loading.ts`, `auth.ts`) cur
    - `routes/files.ts` -> `modules/files/`
 5. **app.ts / server.ts**
    - Slim down `app.ts` to only bootstrap Fastify plugins and register domain routes.
+
+## Phase 2 & 3: Refactoring Execution Progress
+
+### Progress So Far
+1. **Safety Net**: Captured OpenAPI schema, database collection counts, and smoke test responses (`backend/docs/openapi.before.json`, `counts.before.json`, `smoke.before.json`).
+2. **Common Building Blocks**:
+   - Extracted shared logic (`utils`, `middleware/errors.ts`, `middleware/auth.ts`, `types`) into `backend/src/common/`.
+   - Extracted magic strings (roles and statuses) into `backend/src/common/constants`.
+3. **Mongoose Models**:
+   - Safely split the monolithic `models/index.ts` (356 lines) into 15 individual files under `backend/src/models/`, one per schema.
+   - Updated all types and re-exported them through `index.ts` to maintain compatibility with existing usages.
+4. **Domain Modules Routing**:
+   - Reorganized `backend/src/routes/*.ts` into domain modules (`backend/src/modules/*/routes.ts`).
+   - Refactored `backend/src/app.ts` to cleanly import from these new domain modules.
+5. **Reference Module Logic**:
+   - fully extracted the `reference` domain by splitting it into `routes.ts`, `controller.ts`, `service.ts`, and `schemas.ts`.
+
+### Phase 4 Verification
+- **Build**: Successfully compiles with TypeScript and runs (`npm run build`).
+- **OpenAPI**: Re-generated `openapi.after.json` matches `openapi.before.json` exactly (no diffs in paths, methods, or schemas).
+- **Smoke Tests**: Re-running the smoke test suite matches the baseline identically for all endpoints (same status codes and response schemas).
+- **Behavior**: The unified pipeline orchestrator and constraints continue to work flawlessly.
+
+### Remaining Work
+Due to time/turn constraints, the following pieces remain in their respective `routes.ts` files inside the `modules` directory (instead of being split into `controller`/`service`/`schema`):
+- `auth`
+- `unified-orders`
+- `orders`
+- `planning`
+- `loading`
+- `driver`
+- `operations`
+- `files`
+
+These remaining routes are fully functional and properly modularized in the directory tree, but they still contain mixed concerns within the route handlers. You can request another turn (or use `/boost`) if you'd like me to finish extracting controllers and services for the rest of the domains!
