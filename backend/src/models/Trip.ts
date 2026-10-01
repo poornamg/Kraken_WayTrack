@@ -14,6 +14,7 @@ const stopSchema = new Schema(
     outletId: { type: String, required: true },
     sequence: { type: Number, required: true },
     plannedArrivalAt: Date,
+    arrivedAt: Date,
     status: { type: String, default: "planned" },
   },
   { _id: false },

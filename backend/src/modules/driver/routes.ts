@@ -107,12 +107,18 @@ export async function driverRoutes(app: FastifyInstance) {
     if (!stop) throw notFound("The stop was not found.")
     const order = await Order.findById(stop.orderId).lean()
     if (!order) throw notFound("The stop order was not found.")
+    const existingRecord = await DeliveryRecord.findOne({ tripId: trip._id, stopId: stop.stopId })
+    const arrivedAt = existingRecord?.arrivedAt ?? (stop as any).arrivedAt ?? body.data.arrivedAt
     const record = await DeliveryRecord.findOneAndUpdate(
       { tripId: trip._id, stopId: stop.stopId },
-      { $setOnInsert: { orderId: order._id, outletId: order.outletId, driverId: auth.userId, items: order.items.map((item) => ({ orderId: order._id, sku: item.sku, expected: item.quantity, delivered: item.quantity, short: 0, damaged: 0 })) }, $set: { status: "arrived", arrivedAt: body.data.arrivedAt } },
+      { $setOnInsert: { orderId: order._id, outletId: order.outletId, driverId: auth.userId, items: order.items.map((item) => ({ orderId: order._id, sku: item.sku, expected: item.quantity, delivered: item.quantity, short: 0, damaged: 0 })) }, $set: { status: "arrived", arrivedAt } },
       { new: true, upsert: true },
     )
-    stop.status = "arrived"; await trip.save()
+    if (!(stop as any).arrivedAt) {
+      (stop as any).arrivedAt = arrivedAt
+    }
+    stop.status = "arrived"
+    await trip.save()
     await audit(request, "delivery.arrived", "delivery", record.id, { clientRecordedAt: body.data.arrivedAt.toISOString() })
     return ok(request, { delivery: record.toObject(), tripVersion: trip.version })
   })
@@ -225,6 +231,42 @@ export async function driverRoutes(app: FastifyInstance) {
           const trip = await Trip.findOne({ _id: point.data.tripId, driverId: auth.userId }).lean()
           if (trip) { await TripLocation.updateOne({ tripId: trip._id, sequence: point.data.sequence }, { $setOnInsert: { ...point.data, driverId: auth.userId, recordedAt: mutation.clientRecordedAt } }, { upsert: true }); result = "applied"; response = { accepted: true } }
           else { result = "conflict"; response = { code: "TRIP_NOT_ASSIGNED" } }
+        }
+      } else if (mutation.operation === "stop_arrival" || mutation.operation === "arrive") {
+        const arrivalPayload = z.object({ tripId: z.string(), stopId: z.string(), arrivedAt: z.coerce.date().optional() }).safeParse(mutation.payload)
+        if (arrivalPayload.success) {
+          const trip = await Trip.findOne({ _id: arrivalPayload.data.tripId, driverId: auth.userId })
+          if (trip) {
+            const stop = trip.stops.find((candidate) => candidate.stopId === arrivalPayload.data.stopId)
+            if (stop) {
+              const order = await Order.findById(stop.orderId).lean()
+              const existingRecord = await DeliveryRecord.findOne({ tripId: trip._id, stopId: stop.stopId })
+              const arrivedAt = existingRecord?.arrivedAt ?? (stop as any).arrivedAt ?? arrivalPayload.data.arrivedAt ?? mutation.clientRecordedAt
+              if (order) {
+                await DeliveryRecord.findOneAndUpdate(
+                  { tripId: trip._id, stopId: stop.stopId },
+                  {
+                    $setOnInsert: { orderId: order._id, outletId: order.outletId, driverId: auth.userId, items: order.items.map((item) => ({ orderId: order._id, sku: item.sku, expected: item.quantity, delivered: item.quantity, short: 0, damaged: 0 })) },
+                    $set: { status: "arrived", arrivedAt }
+                  },
+                  { upsert: true }
+                )
+              }
+              if (!(stop as any).arrivedAt) {
+                (stop as any).arrivedAt = arrivedAt
+              }
+              stop.status = "arrived"
+              await trip.save()
+              result = "applied"
+              response = { arrived: true, arrivedAt: arrivedAt.toISOString(), stopId: stop.stopId }
+            } else {
+              result = "conflict"
+              response = { code: "STOP_NOT_FOUND" }
+            }
+          } else {
+            result = "conflict"
+            response = { code: "TRIP_NOT_ASSIGNED" }
+          }
         }
       }
       await SyncReceipt.create({ clientMutationId: mutation.clientMutationId, driverId: auth.userId, tripId: mutation.entityId, operation: mutation.operation, result, response })
