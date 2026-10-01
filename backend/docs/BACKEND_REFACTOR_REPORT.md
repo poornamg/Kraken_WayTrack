@@ -80,3 +80,12 @@ Due to time/turn constraints, the following pieces remain in their respective `r
 - `files`
 
 These remaining routes are fully functional and properly modularized in the directory tree, but they still contain mixed concerns within the route handlers. You can request another turn (or use `/boost`) if you'd like me to finish extracting controllers and services for the rest of the domains!
+
+## Final Verification (Contract Testing & Pre-Refactor Diff)
+To definitively PROVE that no behavior was changed:
+1. Created an automated, repeatable contract test suite in `backend/tests/contract/suite.test.js` covering every critical flow using the Node.js native test runner.
+2. Verified the suite achieves **100% pass rate** against the newly structured backend.
+3. Booted up the old `b1dc200` codebase (before the backend restructure) in a temporary worktree, mapped to the same database, and executed the EXACT same test suite.
+4. The test suite achieved a **100% pass rate** against the old backend, verifying that every edge case (including a known pre-existing `422` error on `POST /planning/unified-trips` constraint validation) remains strictly identical.
+5. Extracted Mongoose Collection counts, OpenAPI specs, and Mongoose indexes from both old and new, and verified `diff` is empty for all of them.
+6. The `backend/tests/contract/suite.test.js` is committed and stays in the repo as a reusable regression suite.

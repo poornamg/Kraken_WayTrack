@@ -1,0 +1,438 @@
+{
+  "deliveryrecords": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "tripId": 1,
+        "stopId": 1
+      },
+      "name": "tripId_1_stopId_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "outletId": 1,
+        "completedAt": -1
+      },
+      "name": "outletId_1_completedAt_-1",
+      "background": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "driverId": 1,
+        "completedAt": -1
+      },
+      "name": "driverId_1_completedAt_-1",
+      "background": true
+    }
+  ],
+  "operationalevents": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "entityType": 1,
+        "entityId": 1,
+        "createdAt": -1
+      },
+      "name": "entityType_1_entityId_1_createdAt_-1",
+      "background": true
+    }
+  ],
+  "unifiedorders": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    }
+  ],
+  "fileassets": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "publicId": 1
+      },
+      "name": "publicId_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "tripId": 1,
+        "kind": 1
+      },
+      "name": "tripId_1_kind_1",
+      "background": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "deliveryId": 1,
+        "kind": 1
+      },
+      "name": "deliveryId_1_kind_1",
+      "background": true
+    }
+  ],
+  "products": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "sku": 1
+      },
+      "name": "sku_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "brand": 1,
+        "active": 1,
+        "name": 1
+      },
+      "name": "brand_1_active_1_name_1",
+      "background": true
+    }
+  ],
+  "orders": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "orderNumber": 1
+      },
+      "name": "orderNumber_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "outletId": 1,
+        "createdAt": -1
+      },
+      "name": "outletId_1_createdAt_-1",
+      "background": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "requestedDate": 1,
+        "status": 1,
+        "brand": 1
+      },
+      "name": "requestedDate_1_status_1_brand_1",
+      "background": true
+    }
+  ],
+  "outlets": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "outletId": 1
+      },
+      "name": "outletId_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "brand": 1,
+        "depot": 1,
+        "district": 1
+      },
+      "name": "brand_1_depot_1_district_1",
+      "background": true
+    }
+  ],
+  "triplocations": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "tripId": 1,
+        "sequence": 1
+      },
+      "name": "tripId_1_sequence_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "tripId": 1,
+        "recordedAt": -1
+      },
+      "name": "tripId_1_recordedAt_-1",
+      "background": true
+    }
+  ],
+  "vehicles": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "vehicleId": 1
+      },
+      "name": "vehicleId_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "depot": 1,
+        "type": 1,
+        "temperatureClass": 1,
+        "active": 1
+      },
+      "name": "depot_1_type_1_temperatureClass_1_active_1",
+      "background": true
+    }
+  ],
+  "idempotencyrecords": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "key": 1,
+        "userId": 1,
+        "operation": 1
+      },
+      "name": "key_1_userId_1_operation_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "expiresAt": 1
+      },
+      "name": "expiresAt_1",
+      "background": true,
+      "expireAfterSeconds": 0
+    }
+  ],
+  "trips": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "tripNumber": 1
+      },
+      "name": "tripNumber_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "serviceDate": 1,
+        "vehicleId": 1,
+        "status": 1
+      },
+      "name": "serviceDate_1_vehicleId_1_status_1",
+      "background": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "driverId": 1,
+        "serviceDate": 1
+      },
+      "name": "driverId_1_serviceDate_1",
+      "background": true
+    }
+  ],
+  "authhandoffs": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "codeHash": 1
+      },
+      "name": "codeHash_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "expiresAt": 1
+      },
+      "name": "expiresAt_1",
+      "background": true,
+      "expireAfterSeconds": 0
+    }
+  ],
+  "loadrecords": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "tripId": 1
+      },
+      "name": "tripId_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "depot": 1,
+        "status": 1,
+        "createdAt": -1
+      },
+      "name": "depot_1_status_1_createdAt_-1",
+      "background": true
+    }
+  ],
+  "users": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "employeeId": 1
+      },
+      "name": "employeeId_1",
+      "background": true,
+      "unique": true
+    },
+    {
+      "v": 2,
+      "key": {
+        "email": 1,
+        "role": 1
+      },
+      "name": "email_1_role_1",
+      "background": true
+    }
+  ],
+  "syncreceipts": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "clientMutationId": 1,
+        "driverId": 1
+      },
+      "name": "clientMutationId_1_driverId_1",
+      "background": true,
+      "unique": true
+    }
+  ],
+  "calendardays": [
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_"
+    },
+    {
+      "v": 2,
+      "key": {
+        "date": 1
+      },
+      "name": "date_1",
+      "background": true,
+      "unique": true
+    }
+  ]
+}

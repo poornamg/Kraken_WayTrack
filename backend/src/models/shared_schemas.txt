@@ -1,0 +1,91 @@
+const statusEventSchema = new Schema(
+  {
+    status: { type: String, required: true },
+    at: { type: Date, required: true, default: Date.now },
+    actorId: { type: Schema.Types.ObjectId, ref: "User" },
+    note: String,
+  },
+  { _id: false },
+)
+
+const userSchema = new Schema(
+  {
+    employeeId: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    role: { type: String, enum: ROLES, required: true },
+    passwordHash: { type: String, required: true, select: false },
+    outletId: { type: String, trim: true },
+    depot: { type: String, trim: true },
+    active: { type: Boolean, default: true },
+  },
+  { timestamps: true, versionKey: "version", optimisticConcurrency: true },
+)
+userSchema.index({ email: 1, role: 1 })
+
+const handoffSchema = new Schema(
+  {
+    codeHash: { type: String, required: true, unique: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    intendedOrigin: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+    consumedAt: Date,
+  },
+  { timestamps: true, versionKey: false },
+)
+handoffSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
+const outletSchema = new Schema(
+  {
+    outletId: { type: String, required: true, unique: true },
+    displayName: { type: String, required: true },
+    brand: { type: String, required: true },
+    district: { type: String, required: true },
+    depot: { type: String, required: true },
+    dockType: String,
+    parkingConstraint: String,
+    windowOpenTime: { type: String, required: true },
+    windowCloseTime: { type: String, required: true },
+    coordinates: { latitude: Number, longitude: Number },
+    source: { type: String, default: "official_csv" },
+    active: { type: Boolean, default: true },
+  },
+  { timestamps: true, versionKey: "version" },
+)
+outletSchema.index({ brand: 1, depot: 1, district: 1 })
+
+const vehicleSchema = new Schema(
+  {
+    vehicleId: { type: String, required: true, unique: true },
+    type: { type: String, required: true },
+    temperatureClass: { type: String, required: true },
+    weightCapacityKg: { type: Number, required: true, min: 0 },
+    volumeCapacityM3: { type: Number, required: true, min: 0 },
+    fuelType: { type: String, required: true },
+    kmPerL: { type: Number, required: true, min: 0.01 },
+    weeklyFuelQuotaL: { type: Number, required: true, min: 0 },
+    depot: { type: String, required: true },
+    active: { type: Boolean, default: true },
+  },
+  { timestamps: true, versionKey: "version" },
+)
+vehicleSchema.index({ depot: 1, type: 1, temperatureClass: 1, active: 1 })
+
+const calendarDaySchema = new Schema(
+  {
+    date: { type: String, required: true, unique: true },
+    dayOfWeek: { type: String, required: true },
+    isWeekend: { type: Boolean, required: true },
+    isoYear: { type: Number, required: true },
+    isoWeek: { type: Number, required: true },
+    isPayday: { type: Boolean, required: true },
+    festival: String,
+    festivalRamp: Number,
+    isHoliday: { type: Boolean, required: true },
+    monsoon: { type: Boolean, required: true },
+    isOperating: { type: Boolean, required: true },
+  },
+  { timestamps: true, versionKey: false },
+)
+
+const productSchema = new Schema(

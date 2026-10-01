@@ -1,5 +1,6 @@
 import mongoose, { Schema, model } from "mongoose"
-const addressSchema = new Schema({ lat: { type: Number, required: true }, lng: { type: Number, required: true }, text: String }, { _id: false })
+import { addressSchema } from "./shared.js"
+
 
 const locationSchema = new Schema(
   {

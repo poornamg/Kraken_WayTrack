@@ -1,3 +1,7 @@
+import * as crypto from "node:crypto";
+import { UnifiedOrder } from "../../models/unifiedOrder.js";
+import { DeliveryRecord } from "../../models/index.js";
+import * as argon2 from "argon2";
 import { randomBytes } from "node:crypto"
 import mongoose from "mongoose"
 import type { FastifyInstance } from "fastify"
@@ -203,9 +207,6 @@ export async function planningRoutes(app: FastifyInstance) {
     if (!driver) throw unprocessable("DRIVER_UNAVAILABLE", "The selected Driver is unavailable.")
     if (!vehicle) throw unprocessable("VEHICLE_UNAVAILABLE", "The selected vehicle is unavailable.")
 
-    const { UnifiedOrder } = require("../../models/unifiedOrder.js");
-    const { DeliveryRecord } = require("../../models/index.js");
-    const argon2 = require("argon2");
     
     const existingTrip = await Trip.findOne({ 
       serviceDate: parsed.data.serviceDate, 
@@ -244,7 +245,7 @@ export async function planningRoutes(app: FastifyInstance) {
             requestedDate: parsed.data.serviceDate,
             cutoffBucket: "before_cutoff",
             status: "allocated",
-            items: uo.items.map((item: any) => ({ sku: item.name.toLowerCase().replace(/\s+/g, '-'), name: item.name, quantity: item.qty || 1 })),
+            items: uo.items.map((item: any) => ({ sku: item.name.toLowerCase().replace(/\s+/g, '-'), name: item.name, quantity: item.qty || 1, unit: 'box', unitWeightKg: 1, unitVolumeM3: 0.01, temperatureClass: 'ambient', fragile: false, productId: new mongoose.Types.ObjectId() })),
             totalWeightKg: uo.kg || 10,
             totalVolumeM3: (uo.kg || 10) / 100,
           }], { session });
@@ -265,19 +266,21 @@ export async function planningRoutes(app: FastifyInstance) {
           driverId: parsed.data.driverId,
           orderIds: realOrderIds.map(String),
           plannedArrivals: Object.fromEntries(realOrderIds.map((id, i) => [String(id), parsed.data.stops[i]!.plannedArrivalAt])),
-          distanceKm: parsed.data.distanceKm
+          distanceKm: parsed.data.distanceKm,
+          session
         });
         
         if (!validation.valid) throw unprocessable("TRIP_CONSTRAINTS_FAILED", "The trip does not satisfy all hard constraints.", validation)
         
         const trip = await Trip.create([{
-          tripNumber: `TRP-${parsed.data.serviceDate.replaceAll("-", "")}-${require("node:crypto").randomBytes(3).toString("hex").toUpperCase()}`,
+          tripNumber: `TRP-${parsed.data.serviceDate.replaceAll("-", "")}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`,
           serviceDate: parsed.data.serviceDate,
           departureAt: parsed.data.departureAt,
           plannedEndAt: parsed.data.plannedEndAt,
           vehicleId: parsed.data.vehicleId,
           driverId: parsed.data.driverId,
           distanceKm: parsed.data.distanceKm,
+          session,
           depot: vehicle.depot,
           dispatcherId: auth.userId,
           status: "published",

@@ -16,11 +16,12 @@ export async function validateTrip(input: {
   plannedArrivals?: Record<string, Date>
   distanceKm: number
   excludeTripId?: string
+  session?: any
 }) {
   const [day, vehicle, orders, existingVehicleRoutes, overlappingDriverTrip] = await Promise.all([
     CalendarDay.findOne({ date: input.serviceDate }).lean(),
     Vehicle.findOne({ vehicleId: input.vehicleId, active: true }).lean(),
-    Order.find({ _id: { $in: input.orderIds } }).lean(),
+    Order.find({ _id: { $in: input.orderIds } }).session(input.session).lean(),
     Trip.countDocuments({
       ...(input.excludeTripId ? { _id: { $ne: input.excludeTripId } } : {}),
       serviceDate: input.serviceDate,
