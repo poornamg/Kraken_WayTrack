@@ -4305,20 +4305,34 @@ function OrdersPage({ business, onNewOrder, onOpenOrder }: { business: "fresh" |
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
+  const [orders, setOrders] = useState<any[]>([])
   
   const statuses = [
     "All", "Order confirmed", "Scheduled", "On the way", 
     "Deferred", "Awaiting confirmation", "Receipt confirmed"
   ]
 
-  const orders = [
-    { id: "ORD-1082", type: formatOrderType(business || "fresh", getDefaultOrderType(business || "fresh")), date: "Thursday, 1 October", statusLabel: "Order confirmed", status: "confirmed" as StatusKind, view: "order-detail", state: "confirmed" },
-    { id: "ORD-1065", type: formatOrderType(business || "fresh", business === "fresh" ? "chilled" : getDefaultOrderType(business || "fresh")), date: "Friday, 2 October", statusLabel: "Deferred", status: "deferred" as StatusKind, subtext: business === "fresh" ? "Refrigerated capacity" : "Vehicle capacity constraints", view: "order-detail", state: "deferred" },
-    { id: "ORD-1062", type: formatOrderType(business || "fresh", getDefaultOrderType(business || "fresh")), date: "Thursday, 1 October", statusLabel: "Scheduled", status: "scheduled" as StatusKind, eta: "Expected arrival 06:40–07:00", view: "order-detail", state: "scheduled" },
-    { id: "ORD-1071", type: formatOrderType(business || "fresh", getDefaultOrderType(business || "fresh")), date: "Monday, 5 October", statusLabel: "Order confirmed", status: "confirmed" as StatusKind, eta: "Not scheduled yet", view: "order-detail", state: "confirmed" },
-    { id: "ORD-1045", type: formatOrderType(business || "fresh", getDefaultOrderType(business || "fresh")), date: "Today", statusLabel: "Awaiting confirmation", status: "awaiting" as StatusKind, subtext: "Driver completed delivery at 06:52", view: "verify-delivery", state: "verify" },
-    { id: "ORD-1037", type: formatOrderType(business || "fresh", getDefaultOrderType(business || "fresh")), date: "Today · 06:57", statusLabel: "Receipt confirmed", status: "received" as StatusKind, view: "order-detail", state: "receipt-confirmed" }
-  ]
+  useEffect(() => {
+    const fetchOrders = () => {
+      import("./api/store").then((module) => {
+        module.listStoreOrders(business).then((data) => {
+          const formatted = data.map(o => ({
+            id: o.id,
+            type: o.type,
+            date: o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "Today",
+            statusLabel: o.status === "Scheduled" ? "Scheduled" : o.status === "Deferred" ? "Deferred" : "Order confirmed",
+            status: (o.status === "Scheduled" ? "scheduled" : o.status === "Deferred" ? "deferred" : "confirmed") as StatusKind,
+            view: "order-detail",
+            state: o.status === "Deferred" ? "deferred" : o.status === "Scheduled" ? "scheduled" : "confirmed"
+          }))
+          setOrders(formatted)
+        }).catch(console.error)
+      })
+    }
+    fetchOrders()
+    const interval = setInterval(fetchOrders, 5000)
+    return () => clearInterval(interval)
+  }, [business])
 
   const filtered = orders.filter(o => 
     o.id.toLowerCase().includes(search.toLowerCase()) && 

@@ -15,7 +15,7 @@ export type TripInput = {
 }
 
 export const planningApi = {
-  orders: (serviceDate?: string) => apiRequest<PlanningOrder[]>(`/planning/orders?${new URLSearchParams({ ...(serviceDate ? { serviceDate } : {}), pageSize: "100" })}`),
+  orders: (serviceDate?: string) => apiRequest<any[]>(`/unified/orders`),
   vehicles: (serviceDate: string) => apiRequest<FleetVehicle[]>(`/reference/vehicles?serviceDate=${encodeURIComponent(serviceDate)}`),
   drivers: () => apiRequest<DriverReference[]>("/reference/drivers"),
   createTrip: (input: TripInput) => apiRequest<TripDraft>("/planning/trips", { method: "POST", body: JSON.stringify(input) }),

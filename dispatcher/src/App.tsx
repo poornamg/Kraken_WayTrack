@@ -2689,10 +2689,10 @@ export default function App() {
     setPlanningRefreshing(true)
     try {
       const allOrders = await planningApi.orders()
-      const dates = [...new Set(allOrders.map((order) => order.requestedDate))].sort()
+      const configuredDate = import.meta.env.VITE_SERVICE_DATE as string | undefined || "2026-10-01"
+      const dates = [configuredDate]
       setAvailableServiceDates(dates)
-      const configuredDate = import.meta.env.VITE_SERVICE_DATE as string | undefined
-      const planningDate = serviceDate && dates.includes(serviceDate) ? serviceDate : configuredDate && dates.includes(configuredDate) ? configuredDate : dates[0]
+      const planningDate = configuredDate
       if (!planningDate) {
         setOrders([])
         setAllPlanningOrders([])
@@ -2702,22 +2702,25 @@ export default function App() {
         return
       }
       if (planningDate !== serviceDate) setServiceDate(planningDate)
-      const mappedOrders = allOrders.map((order) => ({
-        apiId: order._id,
-        id: order.orderNumber,
-        shop: order.outlet?.displayName ?? order.outletId,
-        town: order.outlet?.district ?? order.outletId,
-        type: order.brand,
-        items: `${order.items.reduce((sum, item) => sum + item.quantity, 0)} units`,
-        kg: order.totalWeightKg,
-        emergency: false,
-        inReach: true,
-        suggested: false,
-        dueDay: Number(order.requestedDate.slice(8, 10)),
-        requestedDate: order.requestedDate,
+      const mappedOrders = allOrders.map((order: any) => ({
+        apiId: order.id,
+        id: order.id,
+        shop: order.storeName,
+        town: order.town,
+        type: order.type,
+        items: order.itemsSummary,
+        kg: order.kg,
+        emergency: order.emergency,
+        inReach: order.inReach,
+        suggested: order.suggested,
+        dueDay: order.dueDay,
+        stop: order.stop,
+        deferred: order.status === "Deferred",
+        deferredTo: order.deferredTo,
+        deferredNotice: order.deferredNotice,
       }))
       setAllPlanningOrders(mappedOrders)
-      const apiOrders = mappedOrders.filter((order) => order.requestedDate === planningDate)
+      const apiOrders = [...mappedOrders]
       const [apiVehicles, apiDrivers] = await Promise.all([planningApi.vehicles(planningDate), planningApi.drivers()])
       setOrders(apiOrders)
       setVehicles(apiVehicles.map((vehicle) => ({
@@ -2788,36 +2791,16 @@ export default function App() {
   }
 
   const publishSchedule = async (scheduled: Order[], vehicle: Vehicle, targetDate: string, departureTime: string) => {
-    if (prototypeMode) return
     const liveOrders = scheduled.filter((order): order is Order & { apiId: string } => Boolean(order.apiId))
-    if (liveOrders.length !== scheduled.length) throw new Error("One or more selected orders are not backed by the planning service.")
-    const driver = drivers.find((candidate) => candidate._id === selectedDriverId)
-    if (!driver) throw new Error("No active Driver is available for this route.")
-    const plannedDistanceKm = Number(distanceKm)
-    if (!Number.isFinite(plannedDistanceKm) || plannedDistanceKm <= 0) throw new Error("Enter the planned route distance before publishing.")
-    const plannedDurationMinutes = Number(durationMinutes)
-    if (!Number.isFinite(plannedDurationMinutes) || plannedDurationMinutes <= 0) throw new Error("Enter the planned route duration before publishing.")
-    const departureAt = new Date(`${targetDate}T${departureTime}:00+05:30`)
-    const plannedEndAt = new Date(departureAt.getTime() + plannedDurationMinutes * 60_000)
-    const input: TripInput = {
-      serviceDate: targetDate,
-      departureAt: departureAt.toISOString(),
-      plannedEndAt: plannedEndAt.toISOString(),
-      vehicleId: vehicle.id,
-      driverId: driver._id,
-      distanceKm: plannedDistanceKm,
-      stops: liveOrders.map((order, index) => ({
-        orderId: order.apiId,
-        plannedArrivalAt: new Date(departureAt.getTime() + plannedDurationMinutes * 60_000 * ((index + 1) / (liveOrders.length + 1))).toISOString(),
-      })),
+    
+    // PATCH each order to "Scheduled"
+    for (const order of liveOrders) {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000"}/api/v1/unified/orders/${order.apiId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Scheduled", stop: scheduled.indexOf(order) + 1 })
+      })
     }
-    const draft = await planningApi.createTrip(input)
-    const validation = await planningApi.validateTrip(draft._id)
-    if (!validation.valid) {
-      const failures = validation.rules.filter((rule) => !rule.passed).map((rule) => rule.message).join(" ")
-      throw new Error(failures || "The route failed planning validation.")
-    }
-    await planningApi.publishTrip(draft._id, validation.version)
   }
 
   const finishSchedule = (message: string, scheduled: Order[], day?: number) => {
@@ -2872,14 +2855,19 @@ export default function App() {
   ) => {
     const selected = orders.filter((order) => selectedIds.includes(order.id))
     try {
-      if (!prototypeMode) {
-        const apiIds = selected.map((order) => order.apiId).filter((id): id is string => Boolean(id))
-        if (apiIds.length !== selected.length) throw new Error("One or more selected orders are not backed by the planning service.")
-        const offset = deferTo.startsWith("Wed") ? 3 : deferTo.startsWith("Tue") ? 2 : 1
-        const reasonCode = (reasons[0] ?? "dispatcher_deferral").toLowerCase().replaceAll(/[^a-z0-9]+/g, "_").replaceAll(/^_|_$/g, "")
-        const results = await planningApi.deferBatch(apiIds, datePlusDays(serviceDate, offset), reasonCode, [reasons.join(", "), notice].filter(Boolean).join(" — "))
-        const conflicts = results.filter((result) => result.result === "conflict").length
-        if (conflicts) throw new Error(`${conflicts} order${conflicts === 1 ? "" : "s"} changed before deferral. Refresh and try again.`)
+      const apiIds = selected.map((order) => order.apiId).filter((id): id is string => Boolean(id))
+      for (const apiId of apiIds) {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000"}/api/v1/unified/orders/${apiId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "Deferred",
+            deferred: true,
+            deferredTo: deferTo,
+            deferredNotice: notice,
+            dueDay: 28,
+          })
+        })
       }
     } catch (error) {
       setToast(error instanceof Error ? error.message : "The orders could not be deferred.")

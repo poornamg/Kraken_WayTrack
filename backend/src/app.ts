@@ -99,6 +99,7 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
     await api.register(driverRoutes)
     await api.register(operationRoutes)
     await api.register(fileRoutes)
+    await api.register((await import("./modules/unified-orders/routes.js")).unifiedOrderRoutes)
   }, { prefix: "/api/v1" })
 
   app.get("/docs/openapi.json", async (_request, reply) => reply.send(app.swagger()))

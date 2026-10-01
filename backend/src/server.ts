@@ -1,9 +1,11 @@
 import { createApp } from "./app.js"
 import { loadConfig } from "./config/env.js"
 import { connectDatabase, disconnectDatabase } from "./database/connection.js"
+import { seedUnifiedOrders } from "./database/seed/unifiedOrders.js"
 
 const config = loadConfig()
 await connectDatabase(config.mongodbUri)
+await seedUnifiedOrders()
 const app = await createApp(config)
 
 async function shutdown(signal: string) {

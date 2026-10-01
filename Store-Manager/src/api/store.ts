@@ -19,10 +19,20 @@ export function getCatalogue(business: keyof typeof brandName, type: string) {
 }
 
 export function submitStoreOrder(input: { business: keyof typeof brandName; type: string; items: Array<{ id: string; quantity: number }> }) {
-  return apiRequest<CreatedOrder>("/orders", {
+  const kg = input.items.reduce((acc, item) => acc + (item.quantity * 10), 0) // rough estimation
+  return apiRequest<CreatedOrder>("/unified/orders", {
     method: "POST",
     headers: { "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify({ orderType: orderTypeName(input.business, input.type), items: input.items.map((item) => ({ productId: item.id, quantity: item.quantity })) }),
+    body: JSON.stringify({ 
+      storeId: "store-1",
+      storeName: "Waypoint " + brandName[input.business],
+      town: "Kandy City",
+      type: brandName[input.business],
+      itemsSummary: input.items.length + " items",
+      kg: kg,
+      items: input.items.map((item) => ({ name: item.id, qty: item.quantity })),
+      dueDay: 28,
+    }),
   })
 }
 
@@ -37,3 +47,10 @@ export const storeDeliveryApi = {
     body: JSON.stringify({ result: "full", expectedVersion: delivery.version, itemOutcomes: delivery.items.map((item) => ({ sku: item.sku, received: item.delivered })), evidenceFileIds: [] }),
   }),
 }
+
+export function listStoreOrders(business: string) {
+  const brandName = { fresh: "Fresh", style: "Style", tech: "Tech" } as any
+  const storeName = "Waypoint " + brandName[business]
+  return apiRequest<any[]>(`/unified/orders?shop=${encodeURIComponent(storeName)}`)
+}
+
