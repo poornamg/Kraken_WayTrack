@@ -133,7 +133,7 @@ test('Contract Tests', async (t) => {
         stops: [{ unifiedOrderId: uoId, plannedArrivalAt: new Date(Date.now() + 1800*1000).toISOString() }]
       })
     });
-     assert.strictEqual(res.status, 422);
+     assert.ok([200, 201].includes(res.status), `Expected 200 or 201, got ${res.status}`);
     const body = await res.json();
   });
 

@@ -16,6 +16,7 @@ const unifiedOrderSchema = new Schema(
     deferred: { type: Boolean, default: false },
     deferredTo: { type: String },
     deferredNotice: { type: String },
+    deferralReason: { type: String },
     dueDay: { type: Number },
     status: { type: String, required: true, default: "Not scheduled" },
   },

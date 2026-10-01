@@ -238,14 +238,14 @@ export async function planningRoutes(app: FastifyInstance) {
           let orderType = brand === "Fresh" ? "dry" : "products";
           const order = await Order.create([{
             orderNumber: `TRP-${parsed.data.serviceDate.replaceAll("-", "")}-${uo._id.toString().slice(-6).toUpperCase()}`,
-            outletId: uo.storeId === "store-1" ? "OUT076" : uo.storeId,
+            outletId: uo.storeId === "store-1" ? "OUT001" : uo.storeId,
             storeManagerId: auth.userId,
             brand,
             orderType,
             requestedDate: parsed.data.serviceDate,
             cutoffBucket: "before_cutoff",
-            status: "allocated",
-            items: uo.items.map((item: any) => ({ sku: item.name.toLowerCase().replace(/\s+/g, '-'), name: item.name, quantity: item.qty || 1, unit: 'box', unitWeightKg: 1, unitVolumeM3: 0.01, temperatureClass: 'ambient', fragile: false, productId: new mongoose.Types.ObjectId() })),
+            status: "submitted",
+            items: uo.items.map((item: any) => ({ sku: item.name.toLowerCase().replace(/\s+/g, '-'), name: item.name, quantity: item.qty || 1, unit: 'box', unitWeightKg: 1, unitVolumeM3: 0.01, temperatureClass: brand === "Fresh" ? "chilled" : "ambient", fragile: false, productId: new mongoose.Types.ObjectId() })),
             totalWeightKg: uo.kg || 10,
             totalVolumeM3: (uo.kg || 10) / 100,
           }], { session });
@@ -295,6 +295,12 @@ export async function planningRoutes(app: FastifyInstance) {
           statusHistory: [{ status: "published", at: new Date(), actorId: auth.userId }],
         }], { session });
         
+        await Order.updateMany(
+          { _id: { $in: realOrderIds } },
+          { $set: { status: "allocated", allocatedTripId: trip[0]!._id } },
+          { session }
+        );
+
         const loadItems = [...trip[0]!.stops].reverse().flatMap((stop: any) => {
           const o = realOrders.find(ro => String(ro._id) === String(stop.orderId));
           return (o?.items ?? []).map((item: any) => ({
@@ -323,7 +329,7 @@ export async function planningRoutes(app: FastifyInstance) {
             stopId: stop!.stopId,
             orderId: order._id,
             outletId: order.outletId,
-            driverId: auth.userId,
+            driverId: parsed.data.driverId,
             status: "planned",
             items: order.items.map((item: any) => ({ orderId: order._id, sku: item.sku, expected: item.quantity, delivered: 0, short: 0, damaged: 0 })),
             pinHash: pinHash,
