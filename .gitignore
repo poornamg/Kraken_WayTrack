@@ -24,6 +24,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local database runtime data
+scratch-mongo/
+
 # Editors and operating systems
 .vscode/
 .idea/
