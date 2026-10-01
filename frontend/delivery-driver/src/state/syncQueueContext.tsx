@@ -4,7 +4,7 @@ import { clearMutations, deleteMutation, listMutations, putMutation, type Stored
 
 export interface SyncQueueItem {
   id: string;
-  type: 'outlet_progress' | 'pin_submission' | 'route_start' | 'route_finish';
+  type: 'outlet_progress' | 'pin_submission' | 'route_start' | 'route_finish' | 'stop_arrival';
   payload: Record<string, unknown>;
   recordedAt: string;
   attempts: number;
@@ -35,17 +35,23 @@ export const SyncQueueProvider: React.FC<{
   }, []);
 
   const enqueue = useCallback((type: SyncQueueItem['type'], payload: any) => {
+    if (type === 'stop_arrival') {
+      const alreadyQueued = queue.some(
+        (q) => q.type === 'stop_arrival' && q.payload.tripId === payload.tripId && q.payload.stopId === payload.stopId
+      );
+      if (alreadyQueued) return;
+    }
     const item: StoredMutation = {
       id: crypto.randomUUID(),
       type,
       payload,
-      recordedAt: new Date().toISOString(),
+      recordedAt: String(payload.arrivedAt || new Date().toISOString()),
       attempts: 0,
       state: 'pending'
     };
     setQueue((prev) => [...prev, item]);
     void putMutation(item);
-  }, []);
+  }, [queue]);
 
   const clearQueue = useCallback(() => {
     setQueue([]);
@@ -63,7 +69,7 @@ export const SyncQueueProvider: React.FC<{
 
       const mutations = currentQueue.filter((item) => item.attempts < 3).map((item) => ({
         clientMutationId: item.id,
-        entityType: String(item.payload.entityType ?? 'trip'),
+        entityType: String(item.payload.entityType ?? (item.type === 'stop_arrival' ? 'stop' : 'trip')),
         entityId: String(item.payload.tripId ?? item.payload.routeId ?? 'unknown'),
         operation: item.type,
         baseVersion: Number(item.payload.baseVersion ?? 0),

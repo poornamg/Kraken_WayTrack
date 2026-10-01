@@ -28,6 +28,7 @@ export interface Outlet {
   managerPhone: string;
   itemCount: number;
   status: 'pending' | 'in_progress' | 'completed';
+  arrivedAt?: string;
   unpackingComplete: boolean;
   completedAt?: string;
   syncStatus: 'synced' | 'pending';

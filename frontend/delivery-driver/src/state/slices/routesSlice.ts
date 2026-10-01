@@ -5,10 +5,12 @@ import { RoutePlan, Outlet, DriverProfile } from '@/shared/types';
 import { createInitialRoutes } from '@/shared/lib/mockData';
 import { CANONICAL_DRIVER } from '@/shared/lib/constants';
 import { driverApi } from '@/api/driver';
+import type { SyncQueueContextType } from '../syncQueueContext';
 
 export function useRoutesSlice(
   track: (id: string) => void,
-  onSyncPhotos?: () => void
+  onSyncPhotos?: () => void,
+  syncQueue?: SyncQueueContextType
 ) {
   const [driver] = useState<DriverProfile>(CANONICAL_DRIVER);
   const [routes, setRoutes] = useState<RoutePlan[]>(createInitialRoutes());
@@ -93,12 +95,63 @@ export function useRoutesSlice(
     track('M01');
   }, [track]);
 
+  const recordStopArrival = useCallback(async (outletId: string, timestamp?: string) => {
+    const route = routes.find((candidate) => candidate.outlets.some((outlet) => outlet.id === outletId));
+    const targetOutlet = route?.outlets.find((o) => o.id === outletId);
+    if (!targetOutlet) return;
+    if (targetOutlet.arrivedAt) return;
+
+    const arrivedAt = timestamp || new Date().toISOString();
+
+    setRoutes((prev) =>
+      prev.map((r) => {
+        if (r.id !== route?.id) return r;
+        return {
+          ...r,
+          outlets: r.outlets.map((o) => {
+            if (o.id !== outletId) return o;
+            return {
+              ...o,
+              arrivedAt,
+              status: o.status === 'completed' ? 'completed' : 'in_progress'
+            };
+          })
+        };
+      })
+    );
+
+    if (syncQueue) {
+      syncQueue.enqueue('stop_arrival', {
+        tripId: route?.apiId ?? String(route?.id),
+        stopId: outletId,
+        arrivedAt,
+        entityType: 'stop'
+      });
+    }
+
+    if (route?.apiId && typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const result = await driverApi.arriveStop(route.apiId, outletId, arrivedAt);
+        if (result.tripVersion !== undefined) {
+          setRoutes((prev) =>
+            prev.map((r) => (r.id === route.id ? { ...r, version: result.tripVersion } : r))
+          );
+        }
+      } catch (e) {
+        console.warn('arriveStop API call failed or offline; queued in syncQueue', e);
+      }
+    }
+  }, [routes, syncQueue]);
+
   const markUnpackingComplete = useCallback(async (outletId: string, complete: boolean = true) => {
     const route = routes.find((candidate) => candidate.outlets.some((outlet) => outlet.id === outletId));
     let deliveryVersion = route?.outlets.find((outlet) => outlet.id === outletId)?.apiVersion;
     let tripVersion = route?.version;
+    const targetOutlet = route?.outlets.find((outlet) => outlet.id === outletId);
+    const existingArrivedAt = targetOutlet?.arrivedAt;
+    const finalArrivedAt = existingArrivedAt || new Date().toISOString();
     if (complete && route?.apiId && deliveryVersion === undefined && import.meta.env.VITE_ALLOW_UNAUTHENTICATED_PROTOTYPE !== 'true') {
-      const arrived = await driverApi.arriveStop(route.apiId, outletId);
+      const arrived = await driverApi.arriveStop(route.apiId, outletId, finalArrivedAt);
       const outlet = route.outlets.find((candidate) => candidate.id === outletId)!;
       const updated = await driverApi.accountStopItems(route.apiId, outletId, arrived.delivery.version, outlet.products);
       deliveryVersion = updated.version;
@@ -110,7 +163,13 @@ export function useRoutesSlice(
         version: r.id === route?.id && tripVersion !== undefined ? tripVersion : r.version,
         outlets: r.outlets.map((o) => {
           if (o.id !== outletId) return o;
-          return { ...o, apiVersion: deliveryVersion, unpackingComplete: complete, status: 'in_progress' };
+          return {
+            ...o,
+            apiVersion: deliveryVersion,
+            unpackingComplete: complete,
+            status: 'in_progress',
+            arrivedAt: o.arrivedAt || finalArrivedAt
+          };
         })
       }))
     );
@@ -286,6 +345,7 @@ export function useRoutesSlice(
     finishRoute,
     setRouteVersion,
     toggleProductCheck,
+    recordStopArrival,
     markUnpackingComplete,
     completeOutlet,
     syncPendingOutlets,

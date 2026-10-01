@@ -24,7 +24,7 @@ export const driverApi = {
   },
   startTrip: (tripId: string, version: number, fileAssetId: string, capturedAt: string) => apiRequest<ApiTrip>(`/trips/${tripId}/start`, { method: "POST", headers: { "If-Match": String(version) }, body: JSON.stringify({ fileAssetId, capturedAt, expectedVersion: version }) }),
   finishTrip: (tripId: string, version: number, fileAssetId: string, capturedAt: string) => apiRequest<ApiTrip>(`/trips/${tripId}/finish`, { method: "POST", headers: { "If-Match": String(version) }, body: JSON.stringify({ endFileAssetId: fileAssetId, capturedAt, expectedVersion: version }) }),
-  arriveStop: (tripId: string, stopId: string) => apiRequest<{ delivery: { version: number }; tripVersion: number }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/arrive`, { method: "POST", body: JSON.stringify({ arrivedAt: new Date().toISOString() }) }),
+  arriveStop: (tripId: string, stopId: string, arrivedAt?: string) => apiRequest<{ delivery: { version: number }; tripVersion: number }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/arrive`, { method: "POST", body: JSON.stringify({ arrivedAt: arrivedAt ?? new Date().toISOString() }) }),
   accountStopItems(tripId: string, stopId: string, version: number, products: Array<{ id: string; quantity: number | string }>) {
     const items = products.map((product) => ({ sku: product.id, delivered: Number(product.quantity), short: 0, damaged: 0 }))
     return apiRequest<{ version: number }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/items`, { method: "PATCH", headers: { "If-Match": String(version) }, body: JSON.stringify({ items, expectedVersion: version }) })

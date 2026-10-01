@@ -23,6 +23,13 @@ export interface MapBottomSheetProps {
   onTurnOnGps: () => void;
 }
 
+const formatArrivalTime = (isoString?: string): string => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return isoString;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
   selectedRoute,
   outlets,
@@ -114,10 +121,10 @@ export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
               <div className="p-4 bg-surface/60 border-b border-hairline">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[12px] font-semibold text-action uppercase tracking-wide">
-                    {isArrived ? 'At Dock' : currentMapOutlet.id === upNextOutlet?.id ? 'Up Next' : `Stop ${currentMapOutlet.visitOrder} of ${outlets.length}`}
+                    {currentMapOutlet.arrivedAt ? 'Arrived' : isArrived ? 'At Dock' : currentMapOutlet.id === upNextOutlet?.id ? 'Up Next' : `Stop ${currentMapOutlet.visitOrder} of ${outlets.length}`}
                   </span>
                   <span className="text-[12px] font-mono tabular-nums text-secondary font-medium">
-                    {isArrived ? '≈ 80 m away' : '≈ 1.2 km away'}
+                    {currentMapOutlet.arrivedAt ? formatArrivalTime(currentMapOutlet.arrivedAt) : isArrived ? '≈ 80 m away' : '≈ 1.2 km away'}
                   </span>
                 </div>
 
@@ -245,7 +252,9 @@ export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
                   isCompletedOutlet ? 'bg-success' : isInProgressOutlet ? 'bg-action' : 'bg-pending'
                 }`} />
                 <span className="text-[13px] font-semibold text-secondary">
-                  {isArrived
+                  {currentMapOutlet.arrivedAt
+                    ? 'Arrived'
+                    : isArrived
                     ? "You've arrived"
                     : currentMapOutlet.id === upNextOutlet?.id
                     ? 'Up next'
@@ -254,7 +263,7 @@ export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
               </div>
 
               <span className="text-[13px] font-mono tabular-nums text-secondary font-medium">
-                {isArrived ? '≈ 80 m away' : '≈ 1.2 km away'}
+                {currentMapOutlet.arrivedAt ? formatArrivalTime(currentMapOutlet.arrivedAt) : isArrived ? '≈ 80 m away' : '≈ 1.2 km away'}
               </span>
             </div>
 

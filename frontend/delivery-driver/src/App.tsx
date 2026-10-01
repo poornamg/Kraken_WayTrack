@@ -1,6 +1,7 @@
 // src/App.tsx - Thin shell (<100 lines): Providers + Screen switch + Mobile responsive device frame
 
 import React, { lazy, Suspense } from 'react';
+import { SyncQueueProvider } from '@/state/syncQueueContext';
 import { StoreProvider, useStore } from '@/state/store';
 import { Toast, DemoSwitcher } from '@/components/ui';
 import { isDemoMode } from '@/shared/lib/demo';
@@ -76,8 +77,10 @@ const AppShell: React.FC = () => {
 
 export default function App() {
   return (
-    <StoreProvider>
-      <AppShell />
-    </StoreProvider>
+    <SyncQueueProvider>
+      <StoreProvider>
+        <AppShell />
+      </StoreProvider>
+    </SyncQueueProvider>
   );
 }

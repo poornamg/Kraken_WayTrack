@@ -11,6 +11,7 @@ export const MarketDetailScreen: React.FC = () => {
     selectedRoute,
     activeOutlet,
     toggleProductCheck,
+    recordStopArrival,
     markUnpackingComplete,
     pushScreen,
     popScreen,
@@ -61,9 +62,21 @@ export const MarketDetailScreen: React.FC = () => {
     showToast(`Calling ${activeOutlet.managerName}…`);
   };
 
+  const handleArrive = async () => {
+    try {
+      await recordStopArrival(activeOutlet.id);
+      showToast('Arrival recorded');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to record arrival.');
+    }
+  };
+
   const handleProceedToPin = async () => {
     if (!isAllChecked) return;
     try {
+      if (!activeOutlet.arrivedAt) {
+        await recordStopArrival(activeOutlet.id);
+      }
       await markUnpackingComplete(activeOutlet.id, true);
       track('M07');
       pushScreen('pin_confirmation');
@@ -96,6 +109,7 @@ export const MarketDetailScreen: React.FC = () => {
           totalCount={totalCount}
           isAllChecked={isAllChecked}
           onCallManager={handleCallManager}
+          onArrive={handleArrive}
         />
 
         <ProductChecklist

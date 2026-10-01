@@ -23,6 +23,7 @@ import { useTrackingSlice } from './slices/trackingSlice';
 import { useConditionsSlice } from './slices/conditionsSlice';
 import { useRoutesSlice } from './slices/routesSlice';
 import { useDemoSlice } from './slices/demoSlice';
+import { useSyncQueue } from './syncQueueContext';
 import { useRouteBootstrap } from './effects/useRouteBootstrap';
 import { useGpsLocationTracking } from './effects/useGpsLocationTracking';
 
@@ -71,6 +72,7 @@ export interface StoreContextType {
   setActiveOutletId: (id: string | null) => void;
   setSelectedMapOutletId: (id: string | null) => void;
   toggleProductCheck: (outletId: string, productId: string) => void;
+  recordStopArrival: (outletId: string, timestamp?: string) => Promise<void>;
   markUnpackingComplete: (outletId: string, complete?: boolean) => Promise<void>;
   completeOutlet: (outletId: string, isOffline?: boolean) => void;
   syncPendingOutlets: () => Promise<void>;
@@ -111,10 +113,11 @@ export interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const syncQueue = useSyncQueue();
   const trackingSlice = useTrackingSlice();
   const navSlice = useNavigationSlice(trackingSlice.track);
   const conditionsSlice = useConditionsSlice(trackingSlice.track);
-  const routesSlice = useRoutesSlice(trackingSlice.track, conditionsSlice.markMeterPhotosSynced);
+  const routesSlice = useRoutesSlice(trackingSlice.track, conditionsSlice.markMeterPhotosSynced, syncQueue);
 
   useRouteBootstrap(routesSlice.setRoutes);
   useGpsLocationTracking(routesSlice.routes);

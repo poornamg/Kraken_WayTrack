@@ -47,6 +47,7 @@ export function useRouteBootstrap(setRoutes: React.Dispatch<React.SetStateAction
                     : stop.status === 'arrived'
                     ? 'in_progress'
                     : 'pending',
+                arrivedAt: (stop as any).arrivedAt ? new Date((stop as any).arrivedAt).toISOString() : undefined,
                 unpackingComplete: false,
                 syncStatus: 'synced',
                 products: (order?.items ?? []).map((item) => ({
