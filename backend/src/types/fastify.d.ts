@@ -1,5 +1,5 @@
 import type { AppConfig } from "../config/env.js"
-import type { Role } from "../database/models/index.js"
+import type { Role } from "../models/index.js"
 
 declare module "fastify" {
   interface FastifyInstance {
