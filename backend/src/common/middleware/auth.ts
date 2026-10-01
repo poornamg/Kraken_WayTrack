@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify"
 import { jwtVerify, SignJWT } from "jose"
 import { forbidden, unauthorized } from "../errors/index.js"
-import { ROLES, type Role } from "../../models/index.js"
+import { ROLES, type Role } from "../constants/roles.js"
 
 const encoder = new TextEncoder()
 
