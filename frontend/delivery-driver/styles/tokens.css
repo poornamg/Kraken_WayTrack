@@ -1,5 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap");
+
 /* styles/tokens.css - WayLink Design Tokens */
 :root {
+  /* Typography tokens per WayLink Design System section 9 */
+  --font-heading: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+
   --bg: #F5F7FB;
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
@@ -21,6 +28,16 @@
 
 :root, html, body {
   color-scheme: light !important;
+  font-family: var(--font-body);
+}
+
+h1, h2, .font-heading, .font-brand {
+  font-family: var(--font-heading);
+}
+
+.font-mono, [data-font="mono"] {
+  font-family: var(--font-data) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Dark mode blocked - strictly enforce light tokens */
@@ -50,7 +67,7 @@
 /* Leaflet map tile filters & custom attribution */
 .leaflet-container {
   background-color: var(--bg) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, sans-serif !important;
+  font-family: var(--font-body) !important;
   touch-action: none !important;
 }
 

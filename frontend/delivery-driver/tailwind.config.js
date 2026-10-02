@@ -40,9 +40,12 @@ export default {
         "gps-tint": "var(--gps-tint)",
       },
       fontFamily: {
-        apple: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
-        brand: ['Poppins', 'sans-serif']
+        body: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        heading: ['Poppins', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        brand: ['Poppins', 'sans-serif'],
+        apple: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif']
       }
     }
   }

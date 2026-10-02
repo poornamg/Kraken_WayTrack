@@ -143,7 +143,7 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col justify-between bg-bg relative overflow-hidden select-none">
-      <TopBar title="Fleet Logistics" />
+      <TopBar title="WayLink" />
 
       {/* Main Content Area */}
       <div className="flex-1 px-4 overflow-y-auto space-y-4 pt-1 pb-4">

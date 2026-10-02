@@ -57,7 +57,7 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
               <button
                 type="button"
                 onClick={onSyncNow}
-                className="ml-1 text-[14px] font-medium text-action hover:underline focus:outline-none cursor-pointer"
+                className="min-h-[48px] -my-3 px-1 inline-flex items-center ml-1 text-[14px] font-medium text-action hover:underline focus:outline-none cursor-pointer"
               >
                 Sync now
               </button>

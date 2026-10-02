@@ -344,7 +344,7 @@ export const TodayAssignments: React.FC<TodayAssignmentsProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="w-full text-center text-[15px] font-medium text-primary-container dark:text-inverse-primary hover:opacity-75 active:opacity-60 transition-opacity focus:outline-none"
+                  className="w-full min-h-[48px] inline-flex items-center justify-center text-center text-[15px] font-medium text-primary-container dark:text-inverse-primary hover:opacity-75 active:opacity-60 transition-opacity focus:outline-none"
                 >
                   {isExpanded
                     ? 'Show fewer stops'

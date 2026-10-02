@@ -53,8 +53,7 @@ export const EndShiftSheet: React.FC<EndShiftSheetProps> = ({
       {/* Sheet Container */}
       <div
         style={{
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, sans-serif',
+          fontFamily: 'var(--font-body)',
           paddingBottom: 'max(20px, calc(12px + env(safe-area-inset-bottom, 0px)))'
         }}
         className="relative w-full max-w-[500px] mx-auto bg-surface rounded-t-[16px] border-t border-hairline p-5 pt-3 flex flex-col gap-3 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200"
@@ -95,7 +94,7 @@ export const EndShiftSheet: React.FC<EndShiftSheetProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-full h-11 text-secondary text-[15px] font-medium flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none cursor-pointer"
+            className="w-full h-12 text-secondary text-[15px] font-medium flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none cursor-pointer"
           >
             Cancel
           </button>
@@ -214,8 +213,7 @@ export const SignOutSheet: React.FC<SignOutSheetProps> = ({
       {/* Sheet container: 16px top radius, 200ms transition respecting prefers-reduced-motion */}
       <div
         style={{
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, sans-serif',
+          fontFamily: 'var(--font-body)',
           paddingBottom: 'max(20px, calc(12px + env(safe-area-inset-bottom, 0px)))'
         }}
         className="relative w-full max-w-[500px] mx-auto bg-surface rounded-t-[16px] border-t border-hairline p-5 pt-3 flex flex-col gap-3 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200 motion-reduce:animate-none"
@@ -300,7 +298,7 @@ export const SignOutSheet: React.FC<SignOutSheetProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSigningOut}
-            className="w-full h-11 text-secondary text-[15px] font-medium flex items-center justify-center hover:opacity-80 active:opacity-60 transition-opacity focus:outline-none cursor-pointer disabled:opacity-40"
+            className="w-full h-12 text-secondary text-[15px] font-medium flex items-center justify-center hover:opacity-80 active:opacity-60 transition-opacity focus:outline-none cursor-pointer disabled:opacity-40"
           >
             Cancel
           </button>

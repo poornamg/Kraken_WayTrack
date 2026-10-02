@@ -45,8 +45,7 @@ const AppShell: React.FC = () => {
       <div
         className="w-full max-w-[480px] min-h-[100vh] min-h-[100dvh] bg-bg sm:border-x sm:border-hairline/60 flex flex-col justify-between relative overflow-hidden"
         style={{
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, sans-serif'
+          fontFamily: 'var(--font-body)'
         }}
       >
         <ErrorBoundary>

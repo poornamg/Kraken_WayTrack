@@ -173,7 +173,7 @@ export const TodayPlan: React.FC<TodayPlanProps> = ({ overrideState }) => {
                   type="button"
                   onClick={() => handleToggleExpand(route.id)}
                   aria-expanded={isExpanded}
-                  className="w-full min-h-[44px] py-2.5 flex items-center justify-between text-left focus:outline-none group active:opacity-70 transition-opacity"
+                  className="w-full min-h-[48px] py-2.5 flex items-center justify-between text-left focus:outline-none group active:opacity-70 transition-opacity"
                 >
                   {/* Left: Route Title (Selected is Blue, unselected is Black) & Secondary Info */}
                   <div className="flex items-baseline gap-2 min-w-0 pr-2">

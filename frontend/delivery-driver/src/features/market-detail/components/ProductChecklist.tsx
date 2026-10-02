@@ -170,15 +170,19 @@ export const ProductChecklist: React.FC<ProductChecklistProps> = ({
                       e.stopPropagation();
                       openShortfallModal(product);
                     }}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors focus:outline-none cursor-pointer ${
-                      productHasShortfall
-                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30'
-                        : 'text-secondary/70 hover:text-black dark:hover:text-white hover:bg-hairline/40'
-                    }`}
+                    className="min-w-[48px] min-h-[48px] -mr-2 -my-2 flex items-center justify-center focus:outline-none cursor-pointer"
                     title="Report Short or Damaged Goods"
                   >
-                    <span className="material-symbols-outlined text-[20px]">
-                      {productHasShortfall ? 'warning' : 'edit_note'}
+                    <span
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        productHasShortfall
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30'
+                          : 'text-secondary/70 hover:text-black dark:hover:text-white hover:bg-hairline/40'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[20px]">
+                        {productHasShortfall ? 'warning' : 'edit_note'}
+                      </span>
                     </span>
                   </button>
                 )}

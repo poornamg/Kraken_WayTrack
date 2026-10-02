@@ -19,6 +19,11 @@
   --swipe-track: rgba(11, 20, 55, 0.08);
   --swipe-border: rgba(11, 20, 55, 0.06);
 
+  /* Typography Tokens */
+  --font-heading: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+
   /* Safe Area Insets */
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
@@ -38,6 +43,16 @@
 
 :root, html, body {
   color-scheme: light !important;
+  font-family: var(--font-body);
+}
+
+h1, h2, .font-heading, .font-brand {
+  font-family: var(--font-heading);
+}
+
+.font-mono, [data-font="mono"] {
+  font-family: var(--font-data) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Dark mode blocked - strictly enforce light tokens across all selectors */

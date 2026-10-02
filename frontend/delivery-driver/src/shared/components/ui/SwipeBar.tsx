@@ -87,7 +87,7 @@ export const SwipeBar: React.FC<SwipeBarProps> = ({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
-            className={`absolute left-1.5 top-1.5 bottom-1.5 w-12 rounded-xl bg-white dark:bg-[#1E2750] shadow-md border border-black/5 dark:border-white/10 flex items-center justify-center cursor-grab active:cursor-grabbing z-20 transition-transform ${
+            className={`absolute left-1.5 top-1.5 bottom-1.5 w-12 rounded-xl bg-white dark:bg-[#1E2750] shadow-md border border-black/5 dark:border-white/10 flex items-center justify-center cursor-grab active:cursor-grabbing z-20 transition-transform after:content-[''] after:absolute after:-inset-2 after:z-10 ${
               isDragging ? 'scale-105' : 'scale-100'
             } ${isNudging ? 'translate-x-[14px]' : ''}`}
             style={{

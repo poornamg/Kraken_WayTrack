@@ -20,8 +20,7 @@ export const RoutePill: React.FC<RoutePillProps> = ({
       onDoubleClick={(e) => e.stopPropagation()}
       className={`h-8 px-3.5 rounded-full bg-surface border border-hairline flex items-center gap-1.5 shadow-sm select-none z-[1000] pointer-events-auto ${className}`}
       style={{
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, sans-serif'
+        fontFamily: 'var(--font-body)'
       }}
     >
       <span className="text-[14px] font-medium text-black dark:text-white leading-none">

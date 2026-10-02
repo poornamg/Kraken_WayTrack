@@ -50,7 +50,7 @@ export const ShiftSummaryScreen: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col justify-between bg-bg relative overflow-hidden select-none">
-      <TopBar title="Fleet Logistics" showBackButton={false} isScrolled={isScrolled} />
+      <TopBar title="WayLink" showBackButton={false} isScrolled={isScrolled} />
 
       <div
         onScroll={(e) => setIsScrolled(e.currentTarget.scrollTop > 4)}
@@ -160,7 +160,7 @@ export const ShiftSummaryScreen: React.FC = () => {
           onClick={() => setIsSignOutOpen(true)}
           aria-label="Sign out"
           data-testid="sign-out-button"
-          className="w-full min-h-[44px] text-secondary hover:text-black dark:hover:text-white active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-lg text-[14px] font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer select-none"
+          className="w-full min-h-[48px] h-12 text-secondary hover:text-black dark:hover:text-white active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-lg text-[14px] font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer select-none"
         >
           <LogOutIcon className="w-4 h-4 text-current shrink-0" />
           <span>Sign out</span>

@@ -40,7 +40,7 @@ export const RouteHeader: React.FC<RouteHeaderProps> = ({
           type="button"
           onClick={onOpenMap}
           aria-label="Open route map"
-          className="text-[17px] font-medium text-action hover:opacity-80 transition-opacity focus:outline-none cursor-pointer min-h-[44px] flex items-baseline pt-1 px-1 -mr-1"
+          className="text-[17px] font-medium text-action hover:opacity-80 transition-opacity focus:outline-none cursor-pointer min-h-[48px] min-w-[48px] -my-2 -mr-2 inline-flex items-center justify-end px-2"
         >
           Map ›
         </button>

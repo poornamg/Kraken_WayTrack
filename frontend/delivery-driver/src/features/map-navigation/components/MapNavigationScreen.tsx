@@ -175,7 +175,7 @@ export const MapNavigationScreen: React.FC = () => {
     <div className="w-full h-full flex flex-col relative overflow-hidden bg-bg select-none">
       <div className="w-full shrink-0 z-20">
         <TopBar
-          title="Fleet Logistics"
+          title="WayLink"
           showBackButton={true}
           onBack={popScreen}
           isScrolled={false}

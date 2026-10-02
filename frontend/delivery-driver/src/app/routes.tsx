@@ -354,7 +354,7 @@ export const AppRouter: React.FC<{ children?: ReactNode }> = () => {
         <div className="w-full max-w-[390px] h-[844px] max-h-[100dvh] sm:rounded-[36px] overflow-hidden shadow-2xl relative bg-bg border border-neutral-800 flex flex-col justify-between select-none">
           {/* ROOT TOPBAR: Rendered ONCE at the top. TopBar never animates per Section 8 */}
           <TopBar
-            title="Fleet Logistics"
+            title="WayLink"
             showBackButton={topBarShowBack}
             onBack={topBarOnBack}
             isScrolled={false}

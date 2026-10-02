@@ -9,7 +9,7 @@ import { registerPwa } from './pwa/register';
 
 registerPwa();
 
-document.title = 'Kraken-Driver';
+document.title = 'WayLink';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

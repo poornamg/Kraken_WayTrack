@@ -85,7 +85,7 @@ export const DriverProfileHeader: React.FC<DriverProfileHeaderProps> = ({
             onClick={onOpenSignOut}
             aria-label="Sign out"
             data-testid="sign-out-button"
-            className="min-h-[44px] min-w-[44px] px-2 -mr-2 flex items-center gap-1.5 text-secondary hover:text-black dark:hover:text-white active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-lg text-[13px] font-medium transition-colors cursor-pointer select-none"
+            className="min-h-[48px] min-w-[48px] px-2 -mr-2 flex items-center gap-1.5 text-secondary hover:text-black dark:hover:text-white active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-lg text-[13px] font-medium transition-colors cursor-pointer select-none"
           >
             <LogOutIcon className="w-4 h-4 text-current shrink-0" />
             <span>Sign out</span>

@@ -89,7 +89,7 @@ export const MarketDetailScreen: React.FC = () => {
   return (
     <div className="w-full h-full flex flex-col justify-between bg-bg relative overflow-hidden select-none">
       <TopBar
-        title="Fleet Logistics"
+        title="WayLink"
         showBackButton={true}
         onBack={handleBack}
         isScrolled={isScrolledFromTop}

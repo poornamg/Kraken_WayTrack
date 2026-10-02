@@ -138,7 +138,7 @@ export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
                   <span>Nuwan Perera</span>
                   <a
                     href={`tel:${currentMapOutlet.managerPhone}`}
-                    className="ml-auto inline-flex items-center gap-1 text-action hover:underline text-[12px] font-semibold"
+                    className="ml-auto min-h-[48px] min-w-[48px] -my-3 -mr-2 inline-flex items-center justify-end gap-1 text-action hover:underline text-[12px] font-semibold"
                   >
                     <span className="material-symbols-outlined text-[14px]">call</span>
                     <span>Call</span>
@@ -277,7 +277,7 @@ export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
               <span>Nuwan Perera</span>
               <a
                 href={`tel:${currentMapOutlet.managerPhone}`}
-                className="ml-auto inline-flex items-center gap-1 text-action hover:underline text-[12px] font-semibold"
+                className="ml-auto min-h-[48px] min-w-[48px] -my-3 -mr-2 inline-flex items-center justify-end gap-1 text-action hover:underline text-[12px] font-semibold"
               >
                 <span className="material-symbols-outlined text-[14px]">call</span>
                 <span>Call</span>
@@ -290,7 +290,7 @@ export const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
                 <button
                   type="button"
                   onClick={onTurnOnGps}
-                  className="font-semibold text-action cursor-pointer hover:underline"
+                  className="min-h-[48px] -my-3 inline-flex items-center font-semibold text-action cursor-pointer hover:underline"
                 >
                   Enable
                 </button>

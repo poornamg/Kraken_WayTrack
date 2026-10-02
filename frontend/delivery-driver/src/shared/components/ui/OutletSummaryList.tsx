@@ -89,11 +89,11 @@ export const OutletSummaryList: React.FC<OutletSummaryListProps> = ({
 
       {/* Expand / Collapse Action button */}
       {hasMore && (
-        <div className="border-t border-hairline px-4 py-3 bg-surface text-center">
+        <div className="border-t border-hairline px-4 py-1 bg-surface text-center">
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-[15px] font-medium text-action hover:opacity-80 transition-opacity focus:outline-none cursor-pointer py-1"
+            className="w-full h-12 min-h-[48px] inline-flex items-center justify-center text-[15px] font-medium text-action hover:opacity-80 transition-opacity focus:outline-none cursor-pointer"
           >
             {isExpanded ? 'Show less' : `Show all ${outlets.length} outlets`}
           </button>

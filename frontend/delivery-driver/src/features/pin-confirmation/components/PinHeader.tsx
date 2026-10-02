@@ -38,7 +38,7 @@ export const PinHeader: React.FC<PinHeaderProps> = ({ outlet, route, onCall }) =
         <button
           type="button"
           onClick={onCall}
-          className="text-action font-medium hover:opacity-80 active:opacity-60 transition-opacity shrink-0 py-0.5 focus:outline-none cursor-pointer"
+          className="min-h-[48px] min-w-[48px] -my-3 -mr-2 inline-flex items-center justify-center text-action font-medium hover:opacity-80 active:opacity-60 transition-opacity shrink-0 focus:outline-none cursor-pointer"
         >
           Call
         </button>

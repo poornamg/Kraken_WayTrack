@@ -31,7 +31,7 @@ export const PinConfirmationScreen: React.FC = () => {
   return (
     <div className="w-full h-full flex flex-col justify-between bg-bg relative overflow-hidden select-none">
       <TopBar
-        title="Fleet Logistics"
+        title="WayLink"
         showBackButton={true}
         onBack={handleBack}
       />
@@ -71,7 +71,7 @@ export const PinConfirmationScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => showToast(`Calling ${activeOutlet.managerName}…`)}
-                className="text-[15px] text-action font-medium mt-3.5 py-1 hover:opacity-80 active:opacity-60 transition-opacity cursor-pointer"
+                className="w-full min-h-[48px] inline-flex items-center justify-center text-[15px] text-action font-medium mt-2 hover:opacity-80 active:opacity-60 transition-opacity cursor-pointer"
               >
                 Call store manager
               </button>

@@ -64,7 +64,7 @@ export const RoutePlanCard: React.FC<RoutePlanCardProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleExpand(route.id)}
-                className="w-full min-h-[44px] py-2.5 flex items-center justify-between text-left focus:outline-none cursor-pointer"
+                className="w-full min-h-[48px] py-2.5 flex items-center justify-between text-left focus:outline-none cursor-pointer"
               >
                 <div className="flex items-baseline gap-2 min-w-0 pr-2">
                   <span

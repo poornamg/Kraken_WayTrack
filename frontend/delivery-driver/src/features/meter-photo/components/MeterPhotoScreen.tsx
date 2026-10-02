@@ -34,7 +34,7 @@ export const MeterPhotoScreen: React.FC<MeterPhotoScreenProps> = ({ moment }) =>
       className="w-full h-full flex flex-col justify-between bg-bg relative overflow-hidden select-none"
     >
       <TopBar
-        title="Fleet Logistics"
+        title="WayLink"
         showBackButton={state !== 'processing'}
         onBack={handleBack}
       />

@@ -10,7 +10,7 @@ export interface TopBarProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
-  title = 'Fleet Logistics',
+  title = 'WayLink',
   showBackButton = false,
   onBack,
   isScrolled = false
@@ -24,7 +24,8 @@ export const TopBar: React.FC<TopBarProps> = ({
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
         paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
-        height: 'calc(44px + env(safe-area-inset-top, 0px))'
+        height: 'calc(48px + env(safe-area-inset-top, 0px))',
+        minHeight: 'calc(48px + env(safe-area-inset-top, 0px))'
       }}
     >
       <div className="min-w-[72px] shrink-0 flex items-center">
@@ -36,7 +37,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               onBack();
             }}
             aria-label="Back"
-            className="inline-flex items-center gap-0.5 text-black dark:text-white hover:opacity-70 active:scale-95 transition-all focus:outline-none py-1 -ml-1 cursor-pointer select-none"
+            className="inline-flex items-center min-h-[48px] min-w-[48px] gap-0.5 text-black dark:text-white hover:opacity-70 active:scale-95 transition-all focus:outline-none -ml-2 px-1 cursor-pointer select-none"
           >
             <span className="material-symbols-outlined text-[24px] leading-none">chevron_left</span>
             <span className="text-[17px] font-normal leading-none -ml-0.5">Back</span>
