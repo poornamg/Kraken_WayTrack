@@ -7,6 +7,10 @@ export interface OutletProduct {
   unit: string;
   chilled?: boolean;
   checked: boolean;
+  deliveredQty?: number;
+  shortQty?: number;
+  damagedQty?: number;
+  reason?: 'missing' | 'damaged' | 'other' | string;
 }
 
 export interface OutletConfirmation {
@@ -28,6 +32,7 @@ export interface Outlet {
   managerPhone: string;
   itemCount: number;
   status: 'pending' | 'in_progress' | 'completed';
+  outcome?: 'delivered' | 'delivered with shortfall' | 'partial' | 'failed' | string;
   arrivedAt?: string;
   unpackingComplete: boolean;
   completedAt?: string;

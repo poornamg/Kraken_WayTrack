@@ -95,6 +95,49 @@ export function useRoutesSlice(
     track('M01');
   }, [track]);
 
+  const updateProductShortfall = useCallback((
+    outletId: string,
+    productId: string,
+    data: { shortQty: number; damagedQty: number; deliveredQty: number; reason?: string }
+  ) => {
+    setRoutes((prev) =>
+      prev.map((r) => ({
+        ...r,
+        outlets: r.outlets.map((o) => {
+          if (o.id !== outletId) return o;
+          const products = o.products.map((p) => {
+            if (p.id !== productId) return p;
+            return {
+              ...p,
+              checked: true,
+              shortQty: data.shortQty,
+              damagedQty: data.damagedQty,
+              deliveredQty: data.deliveredQty,
+              reason: data.reason
+            };
+          });
+          const allChecked = products.every((p) => p.checked);
+          return {
+            ...o,
+            products,
+            status: products.some((p) => p.checked) ? 'in_progress' : o.status,
+            unpackingComplete: allChecked ? o.unpackingComplete : false
+          };
+        })
+      }))
+    );
+    if (syncQueue) {
+      const route = routes.find((candidate) => candidate.outlets.some((outlet) => outlet.id === outletId));
+      syncQueue.enqueue('outlet_progress', {
+        tripId: route?.apiId ?? String(route?.id),
+        stopId: outletId,
+        productId,
+        ...data,
+        entityType: 'stop'
+      });
+    }
+  }, [routes, syncQueue]);
+
   const recordStopArrival = useCallback(async (outletId: string, timestamp?: string) => {
     const route = routes.find((candidate) => candidate.outlets.some((outlet) => outlet.id === outletId));
     const targetOutlet = route?.outlets.find((o) => o.id === outletId);
@@ -157,6 +200,20 @@ export function useRoutesSlice(
       deliveryVersion = updated.version;
       tripVersion = arrived.tripVersion;
     }
+    if (complete && syncQueue && targetOutlet) {
+      syncQueue.enqueue('stop_items', {
+        tripId: route?.apiId ?? String(route?.id),
+        stopId: outletId,
+        items: targetOutlet.products.map((p) => ({
+          sku: p.id,
+          deliveredQty: p.deliveredQty ?? (p.checked ? Number(p.quantity) : 0),
+          shortQty: p.shortQty ?? 0,
+          damagedQty: p.damagedQty ?? 0,
+          reason: p.reason
+        })),
+        entityType: 'stop'
+      });
+    }
     setRoutes((prev) =>
       prev.map((r) => ({
         ...r,
@@ -173,7 +230,7 @@ export function useRoutesSlice(
         })
       }))
     );
-  }, [routes]);
+  }, [routes, syncQueue]);
 
   const completeOutlet = useCallback((outletId: string, isOffline: boolean = false) => {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -182,9 +239,11 @@ export function useRoutesSlice(
         ...r,
         outlets: r.outlets.map((o) => {
           if (o.id !== outletId) return o;
+          const hasShortfall = o.products.some((p) => (Number(p.shortQty || 0) > 0) || (Number(p.damagedQty || 0) > 0));
           return {
             ...o,
             status: 'completed',
+            outcome: hasShortfall ? 'delivered with shortfall' : 'delivered',
             completedAt: timeStr,
             syncStatus: isOffline ? 'pending' : 'synced',
             confirmation: {
@@ -345,6 +404,7 @@ export function useRoutesSlice(
     finishRoute,
     setRouteVersion,
     toggleProductCheck,
+    updateProductShortfall,
     recordStopArrival,
     markUnpackingComplete,
     completeOutlet,

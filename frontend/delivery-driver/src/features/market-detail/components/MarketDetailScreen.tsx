@@ -11,6 +11,7 @@ export const MarketDetailScreen: React.FC = () => {
     selectedRoute,
     activeOutlet,
     toggleProductCheck,
+    updateProductShortfall,
     recordStopArrival,
     markUnpackingComplete,
     pushScreen,
@@ -116,6 +117,7 @@ export const MarketDetailScreen: React.FC = () => {
           products={activeOutlet.products}
           outletId={activeOutlet.id}
           onToggleProduct={toggleProductCheck}
+          onUpdateShortfall={updateProductShortfall}
         />
       </div>
 

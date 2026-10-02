@@ -4,7 +4,7 @@ const MUTATIONS = "mutations"
 
 export type StoredMutation = {
   id: string
-  type: "outlet_progress" | "pin_submission" | "route_start" | "route_finish" | "stop_arrival"
+  type: "outlet_progress" | "pin_submission" | "route_start" | "route_finish" | "stop_arrival" | "stop_items"
   payload: Record<string, unknown>
   recordedAt: string
   attempts: number

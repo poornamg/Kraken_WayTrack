@@ -35,6 +35,7 @@ export const StopTimeline: React.FC<StopTimelineProps> = ({
           const isLast = index === outlets.length - 1;
           const isDone = outlet.status === 'completed';
           const isInProg = outlet.status === 'in_progress';
+          const isShortfall = outlet.outcome === 'delivered with shortfall' || (Boolean(outlet.products) && outlet.products.some((p) => (Number(p.shortQty || 0) > 0) || (Number(p.damagedQty || 0) > 0)));
 
           return (
             <div
@@ -55,7 +56,9 @@ export const StopTimeline: React.FC<StopTimelineProps> = ({
                 <div
                   className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-mono tabular-nums border transition-colors ${
                     isDone
-                      ? 'bg-success/10 border-success/30 text-success'
+                      ? isShortfall
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 font-semibold'
+                        : 'bg-success/10 border-success/30 text-success'
                       : isInProg
                       ? 'bg-action/10 border-action/40 text-action font-semibold'
                       : 'bg-bg border-hairline text-secondary'
@@ -79,11 +82,17 @@ export const StopTimeline: React.FC<StopTimelineProps> = ({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 transition-colors duration-200 ${
-                      isDone ? 'bg-success' : isInProg ? 'bg-action' : 'bg-secondary/40'
+                      isDone
+                        ? isShortfall
+                          ? 'bg-amber-500'
+                          : 'bg-success'
+                        : isInProg
+                        ? 'bg-action'
+                        : 'bg-secondary/40'
                     }`}
                   />
                   <span className="text-[13px] text-secondary font-normal transition-colors duration-200">
-                    {isDone ? 'Completed' : isInProg ? 'In progress' : 'Pending'}
+                    {isDone ? (isShortfall ? 'Completed (shortfall)' : 'Completed') : isInProg ? 'In progress' : 'Pending'}
                   </span>
                   {!isDone && (
                     <span className="material-symbols-outlined text-[18px] text-secondary">

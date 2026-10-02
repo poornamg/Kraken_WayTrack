@@ -25,16 +25,35 @@ export const driverApi = {
   startTrip: (tripId: string, version: number, fileAssetId: string, capturedAt: string) => apiRequest<ApiTrip>(`/trips/${tripId}/start`, { method: "POST", headers: { "If-Match": String(version) }, body: JSON.stringify({ fileAssetId, capturedAt, expectedVersion: version }) }),
   finishTrip: (tripId: string, version: number, fileAssetId: string, capturedAt: string) => apiRequest<ApiTrip>(`/trips/${tripId}/finish`, { method: "POST", headers: { "If-Match": String(version) }, body: JSON.stringify({ endFileAssetId: fileAssetId, capturedAt, expectedVersion: version }) }),
   arriveStop: (tripId: string, stopId: string, arrivedAt?: string) => apiRequest<{ delivery: { version: number }; tripVersion: number }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/arrive`, { method: "POST", body: JSON.stringify({ arrivedAt: arrivedAt ?? new Date().toISOString() }) }),
-  accountStopItems(tripId: string, stopId: string, version: number, products: Array<{ id: string; quantity: number | string }>) {
-    const items = products.map((product) => ({ sku: product.id, delivered: Number(product.quantity), short: 0, damaged: 0 }))
-    return apiRequest<{ version: number }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/items`, { method: "PATCH", headers: { "If-Match": String(version) }, body: JSON.stringify({ items, expectedVersion: version }) })
+  accountStopItems(tripId: string, stopId: string, version: number, products: Array<{ id: string; quantity: number | string; deliveredQty?: number; shortQty?: number; damagedQty?: number; reason?: string }>) {
+    const items = products.map((product) => {
+      const expected = Number(product.quantity)
+      const shortQty = Number(product.shortQty || 0)
+      const damagedQty = Number(product.damagedQty || 0)
+      const deliveredQty = product.deliveredQty !== undefined ? Number(product.deliveredQty) : Math.max(0, expected - shortQty - damagedQty)
+      const reason = product.reason
+      return {
+        sku: product.id,
+        delivered: deliveredQty,
+        short: shortQty,
+        damaged: damagedQty,
+        deliveredQty,
+        shortQty,
+        damagedQty,
+        reason,
+        note: reason,
+      }
+    })
+    return apiRequest<{ version: number; outcome?: string }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/items`, { method: "PATCH", headers: { "If-Match": String(version) }, body: JSON.stringify({ items, expectedVersion: version }) })
   },
-  async completeStop(tripId: string, stopId: string, pin: string, products: Array<{ id: string; quantity: number | string }>, existingDeliveryVersion?: number, currentTripVersion?: number) {
+  async completeStop(tripId: string, stopId: string, pin: string, products: Array<{ id: string; quantity: number | string; deliveredQty?: number; shortQty?: number; damagedQty?: number; reason?: string }>, existingDeliveryVersion?: number, currentTripVersion?: number) {
     const arrived = existingDeliveryVersion === undefined ? await this.arriveStop(tripId, stopId) : { delivery: { version: existingDeliveryVersion }, tripVersion: currentTripVersion ?? 0 }
-    const updated = existingDeliveryVersion === undefined ? await this.accountStopItems(tripId, stopId, arrived.delivery.version, products) : { version: existingDeliveryVersion }
+    const updated = await this.accountStopItems(tripId, stopId, arrived.delivery.version, products)
     const verified = await apiRequest<{ verified: true; version: number }>(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/verify-pin`, { method: "POST", body: JSON.stringify({ pin, clientRecordedAt: new Date().toISOString() }) })
-    await apiRequest(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/complete`, { method: "POST", headers: { "If-Match": String(verified.version) }, body: JSON.stringify({ outcome: "delivered", completedAt: new Date().toISOString(), expectedVersion: verified.version }) })
-    return { tripVersion: arrived.tripVersion, deliveryVersion: updated.version }
+    const hasShortfall = products.some((p) => Number(p.shortQty || 0) > 0 || Number(p.damagedQty || 0) > 0)
+    const outcome = hasShortfall ? "delivered with shortfall" : "delivered"
+    await apiRequest(`/trips/${tripId}/stops/${encodeURIComponent(stopId)}/complete`, { method: "POST", headers: { "If-Match": String(verified.version) }, body: JSON.stringify({ outcome, completedAt: new Date().toISOString(), expectedVersion: verified.version }) })
+    return { tripVersion: arrived.tripVersion, deliveryVersion: updated.version, outcome }
   },
   async uploadEvidence(tripId: string, kind: "start_meter" | "end_meter", file: File) {
     const signature = await apiRequest<{ cloudName: string; apiKey: string; timestamp: number; folder: string; uploadType: string; signature: string }>("/files/upload-signature", { method: "POST", body: JSON.stringify({ kind, tripId, mimeType: file.type, bytes: file.size }) })

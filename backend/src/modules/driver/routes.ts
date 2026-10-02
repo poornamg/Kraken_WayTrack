@@ -126,7 +126,20 @@ export async function driverRoutes(app: FastifyInstance) {
   app.patch("/trips/:tripId/stops/:stopId/items", { preHandler: app.authenticate }, async (request) => {
     const auth = requireRole(request, "driver")
     const params = z.object({ tripId: z.string(), stopId: z.string() }).safeParse(request.params)
-    const body = z.object({ items: z.array(z.object({ sku: z.string(), delivered: z.number().int().min(0), short: z.number().int().min(0), damaged: z.number().int().min(0), note: z.string().max(500).optional() })), expectedVersion: z.number().int().optional() }).safeParse(request.body)
+    const body = z.object({
+      items: z.array(z.object({
+        sku: z.string(),
+        delivered: z.number().int().min(0).optional(),
+        short: z.number().int().min(0).optional(),
+        damaged: z.number().int().min(0).optional(),
+        deliveredQty: z.number().int().min(0).optional(),
+        shortQty: z.number().int().min(0).optional(),
+        damagedQty: z.number().int().min(0).optional(),
+        reason: z.string().max(100).optional(),
+        note: z.string().max(500).optional()
+      })),
+      expectedVersion: z.number().int().optional()
+    }).safeParse(request.body)
     if (!params.success || !body.success) throw badRequest("Delivery item outcomes are invalid.")
     const version = expectedVersion(request, body.data.expectedVersion)
     const record = await DeliveryRecord.findOne({ tripId: params.data.tripId, stopId: params.data.stopId, driverId: auth.userId, status: "arrived", version })
@@ -134,9 +147,36 @@ export async function driverRoutes(app: FastifyInstance) {
     for (const update of body.data.items) {
       const item = record.items.find((candidate) => candidate.sku === update.sku)
       if (!item) throw unprocessable("UNKNOWN_DELIVERY_ITEM", `${update.sku} is not in this delivery.`)
-      if (update.delivered + update.short + update.damaged !== item.expected) throw unprocessable("DELIVERY_QUANTITY_MISMATCH", `${update.sku} quantities must account for the expected total.`)
-      item.set(update)
+
+      const expected = item.expected ?? 0
+      const shortQty = update.shortQty ?? update.short ?? 0
+      const damagedQty = update.damagedQty ?? update.damaged ?? 0
+      const deliveredQty = update.deliveredQty ?? update.delivered ?? (expected - shortQty - damagedQty)
+      const reason = update.reason ?? update.note
+
+      if (deliveredQty + shortQty + damagedQty !== expected) {
+        throw unprocessable("DELIVERY_QUANTITY_MISMATCH", `${update.sku} quantities must account for the expected total.`)
+      }
+      if (shortQty + damagedQty > expected) {
+        throw unprocessable("DELIVERY_QUANTITY_MISMATCH", `${update.sku} shortfall and damage cannot exceed expected.`)
+      }
+      if ((shortQty > 0 || damagedQty > 0) && !reason) {
+        throw unprocessable("DELIVERY_REASON_REQUIRED", `A reason is required when reporting shortfall or damage for ${update.sku}.`)
+      }
+
+      item.delivered = deliveredQty
+      item.short = shortQty
+      item.damaged = damagedQty
+      item.deliveredQty = deliveredQty
+      item.shortQty = shortQty
+      item.damagedQty = damagedQty
+      if (reason) {
+        item.reason = reason
+        item.note = reason
+      }
     }
+    const hasShortfall = record.items.some((candidate) => (candidate.shortQty || candidate.short || 0) > 0 || (candidate.damagedQty || candidate.damaged || 0) > 0)
+    record.outcome = hasShortfall ? "delivered with shortfall" : "delivered"
     await record.save()
     return ok(request, record.toObject())
   })
@@ -172,13 +212,20 @@ export async function driverRoutes(app: FastifyInstance) {
   app.post("/trips/:tripId/stops/:stopId/complete", { preHandler: app.authenticate }, async (request) => {
     const auth = requireRole(request, "driver")
     const params = z.object({ tripId: z.string(), stopId: z.string() }).safeParse(request.params)
-    const body = z.object({ outcome: z.enum(["delivered", "partial", "failed"]), completedAt: z.coerce.date(), expectedVersion: z.number().int().optional() }).safeParse(request.body)
+    const body = z.object({ outcome: z.enum(["delivered", "delivered with shortfall", "partial", "failed"]).optional(), completedAt: z.coerce.date(), expectedVersion: z.number().int().optional() }).safeParse(request.body)
     if (!params.success || !body.success) throw badRequest("Completion data is invalid.")
     const version = expectedVersion(request, body.data.expectedVersion)
-    const record = await DeliveryRecord.findOneAndUpdate({ tripId: params.data.tripId, stopId: params.data.stopId, driverId: auth.userId, status: "proof_verified", version }, { $set: { status: "completed", outcome: body.data.outcome, completedAt: body.data.completedAt }, $inc: { version: 1 } }, { new: true })
+    const record = await DeliveryRecord.findOne({ tripId: params.data.tripId, stopId: params.data.stopId, driverId: auth.userId, status: "proof_verified", version })
     if (!record) throw conflict("DELIVERY_COMPLETE_CONFLICT", "The delivery is not ready to complete or changed.")
+    const hasShortfall = record.items.some((candidate) => (candidate.shortQty || candidate.short || 0) > 0 || (candidate.damagedQty || candidate.damaged || 0) > 0)
+    const computedOutcome = body.data.outcome ?? (hasShortfall ? "delivered with shortfall" : "delivered")
+    const outcome = (body.data.outcome === "delivered" && hasShortfall) ? "delivered with shortfall" : computedOutcome
+    record.status = "completed"
+    record.outcome = outcome
+    record.completedAt = body.data.completedAt
+    await record.save()
     await Order.findByIdAndUpdate(record.orderId, { $set: { status: "delivered" }, $push: { statusHistory: { status: "delivered", at: body.data.completedAt, actorId: auth.userId } } })
-    await audit(request, "delivery.completed", "delivery", record.id, { outcome: body.data.outcome })
+    await audit(request, "delivery.completed", "delivery", record.id, { outcome })
     return ok(request, record.toObject())
   })
 
@@ -259,6 +306,141 @@ export async function driverRoutes(app: FastifyInstance) {
               await trip.save()
               result = "applied"
               response = { arrived: true, arrivedAt: arrivedAt.toISOString(), stopId: stop.stopId }
+            } else {
+              result = "conflict"
+              response = { code: "STOP_NOT_FOUND" }
+            }
+          } else {
+            result = "conflict"
+            response = { code: "TRIP_NOT_ASSIGNED" }
+          }
+        }
+      } else if (mutation.operation === "stop_items" || mutation.operation === "outlet_progress" || mutation.operation === "items") {
+        const itemsPayload = z.object({
+          tripId: z.string(),
+          stopId: z.string(),
+          items: z.array(z.object({
+            sku: z.string(),
+            delivered: z.number().int().min(0).optional(),
+            short: z.number().int().min(0).optional(),
+            damaged: z.number().int().min(0).optional(),
+            deliveredQty: z.number().int().min(0).optional(),
+            shortQty: z.number().int().min(0).optional(),
+            damagedQty: z.number().int().min(0).optional(),
+            reason: z.string().max(100).optional(),
+            note: z.string().max(500).optional()
+          })).optional(),
+          productId: z.string().optional(),
+          deliveredQty: z.number().int().min(0).optional(),
+          shortQty: z.number().int().min(0).optional(),
+          damagedQty: z.number().int().min(0).optional(),
+          reason: z.string().max(100).optional(),
+        }).safeParse(mutation.payload)
+        if (itemsPayload.success) {
+          const trip = await Trip.findOne({ _id: itemsPayload.data.tripId, driverId: auth.userId })
+          if (trip) {
+            const stop = trip.stops.find((candidate) => candidate.stopId === itemsPayload.data.stopId)
+            if (stop) {
+              const order = await Order.findById(stop.orderId).lean()
+              let record = await DeliveryRecord.findOne({ tripId: trip._id, stopId: stop.stopId })
+              if (!record && order) {
+                record = await DeliveryRecord.create({
+                  tripId: trip._id,
+                  stopId: stop.stopId,
+                  orderId: order._id,
+                  outletId: order.outletId,
+                  driverId: auth.userId,
+                  status: "arrived",
+                  arrivedAt: mutation.clientRecordedAt,
+                  items: order.items.map((item) => ({
+                    orderId: order._id,
+                    sku: item.sku,
+                    expected: item.quantity,
+                    delivered: item.quantity,
+                    short: 0,
+                    damaged: 0,
+                    deliveredQty: item.quantity,
+                    shortQty: 0,
+                    damagedQty: 0
+                  }))
+                })
+              }
+              if (record) {
+                const updates = itemsPayload.data.items ?? (itemsPayload.data.productId ? [{
+                  sku: itemsPayload.data.productId,
+                  deliveredQty: itemsPayload.data.deliveredQty,
+                  shortQty: itemsPayload.data.shortQty,
+                  damagedQty: itemsPayload.data.damagedQty,
+                  reason: itemsPayload.data.reason
+                }] : [])
+
+                for (const update of updates) {
+                  const item = record.items.find((candidate) => candidate.sku === update.sku)
+                  if (item) {
+                    const expected = item.expected ?? 0
+                    const shortQty = update.shortQty ?? update.short ?? 0
+                    const damagedQty = update.damagedQty ?? update.damaged ?? 0
+                    const deliveredQty = update.deliveredQty ?? update.delivered ?? (expected - shortQty - damagedQty)
+                    const reason = update.reason ?? update.note
+                    item.delivered = deliveredQty
+                    item.short = shortQty
+                    item.damaged = damagedQty
+                    item.deliveredQty = deliveredQty
+                    item.shortQty = shortQty
+                    item.damagedQty = damagedQty
+                    if (reason) {
+                      item.reason = reason
+                      item.note = reason
+                    }
+                  }
+                }
+                const hasShortfall = record.items.some((candidate) => (candidate.shortQty || candidate.short || 0) > 0 || (candidate.damagedQty || candidate.damaged || 0) > 0)
+                record.outcome = hasShortfall ? "delivered with shortfall" : "delivered"
+                await record.save()
+                result = "applied"
+                response = { updated: true, stopId: stop.stopId, outcome: record.outcome }
+              } else {
+                result = "conflict"
+                response = { code: "DELIVERY_NOT_FOUND" }
+              }
+            } else {
+              result = "conflict"
+              response = { code: "STOP_NOT_FOUND" }
+            }
+          } else {
+            result = "conflict"
+            response = { code: "TRIP_NOT_ASSIGNED" }
+          }
+        }
+      } else if (mutation.operation === "stop_complete" || mutation.operation === "complete" || mutation.operation === "pin_submission") {
+        const completePayload = z.object({
+          tripId: z.string(),
+          stopId: z.string(),
+          outcome: z.string().optional(),
+          completedAt: z.coerce.date().optional()
+        }).safeParse(mutation.payload)
+        if (completePayload.success) {
+          const trip = await Trip.findOne({ _id: completePayload.data.tripId, driverId: auth.userId })
+          if (trip) {
+            const stop = trip.stops.find((candidate) => candidate.stopId === completePayload.data.stopId)
+            if (stop) {
+              const record = await DeliveryRecord.findOne({ tripId: trip._id, stopId: stop.stopId })
+              if (record) {
+                const hasShortfall = record.items.some((candidate) => (candidate.shortQty || candidate.short || 0) > 0 || (candidate.damagedQty || candidate.damaged || 0) > 0)
+                const outcome = completePayload.data.outcome ?? (hasShortfall ? "delivered with shortfall" : "delivered")
+                record.status = "completed"
+                record.outcome = outcome
+                record.completedAt = completePayload.data.completedAt ?? mutation.clientRecordedAt
+                await record.save()
+                stop.status = "completed"
+                await trip.save()
+                await Order.findByIdAndUpdate(record.orderId, { $set: { status: "delivered" }, $push: { statusHistory: { status: "delivered", at: record.completedAt, actorId: auth.userId } } })
+                result = "applied"
+                response = { completed: true, stopId: stop.stopId, outcome }
+              } else {
+                result = "conflict"
+                response = { code: "DELIVERY_NOT_FOUND" }
+              }
             } else {
               result = "conflict"
               response = { code: "STOP_NOT_FOUND" }

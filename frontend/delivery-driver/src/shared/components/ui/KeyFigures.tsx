@@ -5,6 +5,8 @@ import React from 'react';
 export interface KeyFiguresProps {
   outletsCount: number;
   itemsCount: number;
+  shortItemsCount?: number;
+  damagedItemsCount?: number;
   distanceKm: number;
   totalTime: string;
   className?: string;
@@ -14,6 +16,8 @@ export interface KeyFiguresProps {
 export const KeyFigures: React.FC<KeyFiguresProps> = ({
   outletsCount,
   itemsCount,
+  shortItemsCount,
+  damagedItemsCount,
   distanceKm,
   totalTime,
   className = '',
@@ -40,6 +44,13 @@ export const KeyFigures: React.FC<KeyFiguresProps> = ({
           <span className="text-[13px] text-secondary mt-1.5 leading-tight font-normal">
             items unpacked
           </span>
+          {(Boolean(shortItemsCount) || Boolean(damagedItemsCount)) && (
+            <span className="text-[12px] text-amber-600 dark:text-amber-400 font-medium tabular-nums mt-0.5 leading-tight">
+              {shortItemsCount ? `${shortItemsCount} short` : ''}
+              {shortItemsCount && damagedItemsCount ? ' · ' : ''}
+              {damagedItemsCount ? `${damagedItemsCount} damaged` : ''}
+            </span>
+          )}
         </div>
 
         {/* Distance */}

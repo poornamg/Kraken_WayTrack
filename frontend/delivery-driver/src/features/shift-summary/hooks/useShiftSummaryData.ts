@@ -43,14 +43,16 @@ export function useShiftSummaryData() {
   }, [routes, selectedRoute]);
 
   const outlets = useMemo(() => {
-    if (!finishedRoute || !finishedRoute.outlets || finishedRoute.outlets.length < 5) {
+    if (!finishedRoute || !finishedRoute.outlets || finishedRoute.outlets.length === 0) {
       return CANONICAL_ROUTE_2_OUTLETS;
     }
     return finishedRoute.outlets.map((o, idx) => ({
       ...o,
       completedAt: o.completedAt || CANONICAL_ROUTE_2_OUTLETS[idx]?.completedAt || '11:00',
-      itemCount: CANONICAL_ROUTE_2_OUTLETS[idx]?.itemCount || o.itemCount || 9,
-      syncStatus: (o.syncStatus || (o.city === 'Teldeniya' || o.city === 'Kundasale' ? 'pending' : 'synced')) as 'synced' | 'pending'
+      itemCount: o.products?.length
+        ? o.products.reduce((acc, p) => acc + (Number(p.deliveredQty !== undefined ? p.deliveredQty : p.checked ? p.quantity : p.quantity) || 0), 0)
+        : (o.itemCount || CANONICAL_ROUTE_2_OUTLETS[idx]?.itemCount || 9),
+      syncStatus: (o.syncStatus || 'synced') as 'synced' | 'pending'
     }));
   }, [finishedRoute]);
 
@@ -58,10 +60,40 @@ export function useShiftSummaryData() {
     return outlets.filter((o) => o.syncStatus === 'pending').length;
   }, [outlets]);
 
-  const totalItems = useMemo(() => {
-    const sum = outlets.reduce((acc, o) => acc + (o.itemCount || 0), 0);
-    return sum === 126 || sum === 124 ? 126 : sum;
-  }, [outlets]);
+  const { totalDelivered, totalShort, totalDamaged, totalItems } = useMemo(() => {
+    let delivered = 0;
+    let short = 0;
+    let damaged = 0;
+    let hasRealProducts = false;
+
+    for (const o of (finishedRoute?.outlets || [])) {
+      if (o.products && o.products.length > 0) {
+        hasRealProducts = true;
+        for (const p of o.products) {
+          const exp = Number(p.quantity) || 0;
+          const s = Number(p.shortQty) || 0;
+          const d = Number(p.damagedQty) || 0;
+          const del = p.deliveredQty !== undefined ? Number(p.deliveredQty) : Math.max(0, exp - s - d);
+          short += s;
+          damaged += d;
+          delivered += del;
+        }
+      }
+    }
+
+    if (!hasRealProducts) {
+      const sum = outlets.reduce((acc, o) => acc + (o.itemCount || 0), 0);
+      const fallbackSum = sum === 126 || sum === 124 ? 126 : sum;
+      return { totalDelivered: fallbackSum, totalShort: 0, totalDamaged: 0, totalItems: fallbackSum };
+    }
+
+    return {
+      totalDelivered: delivered,
+      totalShort: short,
+      totalDamaged: damaged,
+      totalItems: delivered
+    };
+  }, [finishedRoute, outlets]);
 
   const otherRoutesRemain = useMemo(() => {
     const incompleteRoutes = routes.filter(
@@ -118,6 +150,9 @@ export function useShiftSummaryData() {
     outlets,
     pendingCount,
     totalItems,
+    totalDelivered,
+    totalShort,
+    totalDamaged,
     otherRoutesRemain,
     animationStep,
     syncStatus,

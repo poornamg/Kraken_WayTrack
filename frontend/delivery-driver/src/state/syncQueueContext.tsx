@@ -4,7 +4,7 @@ import { clearMutations, deleteMutation, listMutations, putMutation, type Stored
 
 export interface SyncQueueItem {
   id: string;
-  type: 'outlet_progress' | 'pin_submission' | 'route_start' | 'route_finish' | 'stop_arrival';
+  type: 'outlet_progress' | 'pin_submission' | 'route_start' | 'route_finish' | 'stop_arrival' | 'stop_items';
   payload: Record<string, unknown>;
   recordedAt: string;
   attempts: number;

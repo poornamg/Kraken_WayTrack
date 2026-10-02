@@ -49,6 +49,8 @@ export const OutletSummaryList: React.FC<OutletSummaryListProps> = ({
         {displayedOutlets.map((outlet, index) => {
           const isPendingSync = outlet.syncStatus === 'pending';
           const completionTime = outlet.completedAt || '06:52';
+          const isShortfall = (outlet as any).outcome === 'delivered with shortfall' ||
+            (Boolean((outlet as any).products) && (outlet as any).products.some((p: any) => (Number(p.shortQty || 0) > 0) || (Number(p.damagedQty || 0) > 0)));
 
           return (
             <div
@@ -64,12 +66,12 @@ export const OutletSummaryList: React.FC<OutletSummaryListProps> = ({
                   <span
                     className="w-1.5 h-1.5 rounded-full shrink-0"
                     style={{
-                      backgroundColor: isPendingSync ? 'var(--attention)' : 'var(--success)'
+                      backgroundColor: isPendingSync ? 'var(--attention)' : isShortfall ? '#f59e0b' : 'var(--success)'
                     }}
                     aria-hidden="true"
                   />
                   <span className="text-[13px] text-secondary font-normal leading-none">
-                    {isPendingSync ? 'Waiting to sync' : 'Delivered'}
+                    {isPendingSync ? 'Waiting to sync' : isShortfall ? 'Delivered with shortfall' : 'Delivered'}
                   </span>
                 </div>
               </div>

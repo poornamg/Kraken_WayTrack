@@ -21,6 +21,8 @@ export const ShiftSummaryScreen: React.FC = () => {
     outlets,
     pendingCount,
     totalItems,
+    totalShort,
+    totalDamaged,
     otherRoutesRemain,
     animationStep,
     syncStatus,
@@ -80,6 +82,8 @@ export const ShiftSummaryScreen: React.FC = () => {
           <KeyFigures
             outletsCount={outlets.length}
             itemsCount={totalItems}
+            shortItemsCount={totalShort}
+            damagedItemsCount={totalDamaged}
             distanceKm={finishedRoute?.distanceKm ?? 42}
             totalTime="6h 36m"
           />

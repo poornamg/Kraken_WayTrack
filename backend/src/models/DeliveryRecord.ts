@@ -3,7 +3,19 @@ import { statusEventSchema } from "./shared.js"
 
 
 const deliveryItemSchema = new Schema(
-  { orderId: Schema.Types.ObjectId, sku: String, expected: Number, delivered: Number, short: Number, damaged: Number, note: String },
+  {
+    orderId: Schema.Types.ObjectId,
+    sku: String,
+    expected: Number,
+    delivered: Number,
+    short: Number,
+    damaged: Number,
+    note: String,
+    deliveredQty: Number,
+    shortQty: Number,
+    damagedQty: Number,
+    reason: String,
+  },
   { _id: false },
 )
 
@@ -38,9 +50,6 @@ const deliveryRecordSchema = new Schema(
   },
   { timestamps: true, versionKey: "version", optimisticConcurrency: true },
 )
-deliveryRecordSchema.index({ tripId: 1, stopId: 1 }, { unique: true })
-deliveryRecordSchema.index({ outletId: 1, completedAt: -1 })
-deliveryRecordSchema.index({ driverId: 1, completedAt: -1 })
 deliveryRecordSchema.index({ tripId: 1, stopId: 1 }, { unique: true })
 deliveryRecordSchema.index({ outletId: 1, completedAt: -1 })
 deliveryRecordSchema.index({ driverId: 1, completedAt: -1 })

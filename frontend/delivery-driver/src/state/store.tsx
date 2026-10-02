@@ -72,6 +72,11 @@ export interface StoreContextType {
   setActiveOutletId: (id: string | null) => void;
   setSelectedMapOutletId: (id: string | null) => void;
   toggleProductCheck: (outletId: string, productId: string) => void;
+  updateProductShortfall: (
+    outletId: string,
+    productId: string,
+    data: { shortQty: number; damagedQty: number; deliveredQty: number; reason?: string }
+  ) => void;
   recordStopArrival: (outletId: string, timestamp?: string) => Promise<void>;
   markUnpackingComplete: (outletId: string, complete?: boolean) => Promise<void>;
   completeOutlet: (outletId: string, isOffline?: boolean) => void;
